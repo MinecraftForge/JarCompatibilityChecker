@@ -1,0 +1,91 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'org.cadixdev.licenser' version '0.6.1'
+    id 'net.minecraftforge.gradleutils' version '2.+'
+}
+
+group 'net.minecraftforge'
+
+version = gradleutils.getTagOffsetVersion()
+println('Version: ' + version)
+java.toolchain.languageVersion = JavaLanguageVersion.of(8)
+
+license {
+    header project.file('LICENSE-header.txt')
+    include 'net/minecraftforge/jarcompatibilitychecker/**/*.java'
+}
+
+repositories {
+    mavenCentral()
+
+    maven {
+        url 'https://maven.minecraftforge.net/'
+    }
+}
+
+dependencies {
+    implementation 'org.ow2.asm:asm-commons:9.3'
+    implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
+    implementation 'com.google.code.gson:gson:2.9.0'
+    implementation 'com.google.guava:guava:31.1-jre'
+
+    compileOnly 'org.jetbrains:annotations:13.0'
+}
+
+jar {
+    manifest {
+        attributes([
+                'Main-Class': 'net.minecraftforge.jarcompatibilitychecker.ConsoleTool',
+                'Implementation-Version': project.version
+        ])
+    }
+}
+
+java.withSourcesJar()
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+}
+
+publishing {
+    publications {
+        pluginMaven(MavenPublication) {
+            from components.java
+
+            pom {
+                name = 'JAR Compatibility Checker'
+                description = 'Reports API or binary incompatibilities between two JARs'
+                url = 'https://github.com/MinecraftForge/JarCompatibilityChecker'
+
+                scm {
+                    url = 'https://github.com/MinecraftForge/JarCompatibilityChecker'
+                    connection = 'scm:git:git://github.com/MinecraftForge/JarCompatibilityChecker.git'
+                    developerConnection = 'scm:git:git@github.com:MinecraftForge/JarCompatibilityChecker.git'
+                }
+
+                issueManagement {
+                    system = 'github'
+                    url = 'https://github.com/MinecraftForge/JarCompatibilityChecker/issues'
+                }
+
+                licenses {
+                    license {
+                        name = 'LGPLv2.1'
+                        url = 'https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id = 'SizableShrimp'
+                        name = 'SizableShrimp'
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+        maven gradleutils.getPublishingForgeMaven()
+    }
+}
