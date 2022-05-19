@@ -20,18 +20,19 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Queue;
 import java.util.Set;
 
 public class ClassInfoComparer {
-    public static Results compare(boolean checkBinary, ClassInfoCache baseCache, ClassInfo baseClassInfo, ClassInfoCache concreteCache, @Nullable ClassInfo concreteClassInfo) {
-        Results results = new Results(baseClassInfo.name);
+    public static ClassInfoComparisonResults compare(boolean checkBinary, ClassInfoCache baseCache, ClassInfo baseClassInfo, ClassInfoCache concreteCache, @Nullable ClassInfo concreteClassInfo) {
+        ClassInfoComparisonResults results = new ClassInfoComparisonResults(baseClassInfo);
 
         if (concreteClassInfo == null) {
             if (checkBinary) {
-                results.addIncompatibility("Class no longer exists");
+                results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_MISSING);
             } else if ((baseClassInfo.access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0) {
-                results.addIncompatibility("API class no longer exists");
+                results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.API_CLASS_MISSING);
             }
 
             // This is as far as we can get if the input class doesn't exist
@@ -39,11 +40,11 @@ public class ClassInfoComparer {
         }
 
         if (isVisibilityLowered(checkBinary, baseClassInfo.access, concreteClassInfo.access)) {
-            results.addIncompatibility("Class was lowered in visibility");
+            results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_LOWERED_VISIBILITY);
         }
 
         if (baseClassInfo.superName != null && !hasSuperClass(concreteCache, concreteClassInfo, baseClassInfo.superName)) {
-            results.addIncompatibility("Class missing superclass of " + baseClassInfo.superName);
+            results.addClassIncompatibility(baseClassInfo, String.format(Locale.ROOT, IncompatibilityMessages.CLASS_MISSING_SUPERCLASS, baseClassInfo.superName));
         }
 
         Set<String> baseInterfaces = new HashSet<>(getParentClassNames(baseCache, baseClassInfo, false));
@@ -52,9 +53,9 @@ public class ClassInfoComparer {
         Set<String> missingInterfaces = Sets.difference(baseInterfaces, concreteInterfaces);
         if (!missingInterfaces.isEmpty()) {
             if (missingInterfaces.size() == 1) {
-                results.addIncompatibility("Class missing interface: " + missingInterfaces.iterator().next());
+                results.addClassIncompatibility(baseClassInfo, String.format(Locale.ROOT, IncompatibilityMessages.CLASS_MISSING_INTERFACE, missingInterfaces.iterator().next()));
             } else {
-                results.addIncompatibility("Class missing interfaces: " + missingInterfaces);
+                results.addClassIncompatibility(baseClassInfo, String.format(Locale.ROOT, IncompatibilityMessages.CLASS_MISSING_INTERFACES, missingInterfaces));
             }
         }
 
@@ -68,9 +69,9 @@ public class ClassInfoComparer {
 
             if (inputInfo == null) {
                 if (checkBinary) {
-                    results.addIncompatibility(baseInfo, "Method was removed");
+                    results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.METHOD_REMOVED);
                 } else if (basePublic || baseProtected) {
-                    results.addIncompatibility(baseInfo, "API method was removed");
+                    results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.API_METHOD_REMOVED);
                 }
 
                 // This is as far as we can get without any info on the concrete method
@@ -78,7 +79,7 @@ public class ClassInfoComparer {
             }
 
             if (isVisibilityLowered(checkBinary, baseInfo.access, inputInfo.access)) {
-                results.addIncompatibility(baseInfo, "Method was lowered in visibility");
+                results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.METHOD_LOWERED_VISIBILITY);
             }
         }
 
@@ -90,9 +91,9 @@ public class ClassInfoComparer {
 
             if (inputInfo == null) {
                 if (checkBinary) {
-                    results.addIncompatibility(baseInfo, "Field was removed");
+                    results.addFieldIncompatibility(baseInfo, IncompatibilityMessages.FIELD_REMOVED);
                 } else if (basePublic || baseProtected) {
-                    results.addIncompatibility(baseInfo, "API field was removed");
+                    results.addFieldIncompatibility(baseInfo, IncompatibilityMessages.API_FIELD_REMOVED);
                 }
 
                 // This is as far as we can get without any info on the concrete field
@@ -100,7 +101,7 @@ public class ClassInfoComparer {
             }
 
             if (isVisibilityLowered(checkBinary, baseInfo.access, inputInfo.access)) {
-                results.addIncompatibility(baseInfo, "Field was lowered in visibility");
+                results.addFieldIncompatibility(baseInfo, IncompatibilityMessages.FIELD_LOWERED_VISIBILITY);
             }
         }
 
@@ -214,7 +215,9 @@ public class ClassInfoComparer {
 
         // TODO Should this use a secondary comparator which sorts by declaration order?
         List<String> parents = TopologicalSort.topologicalSort(parentGraph, null);
-        parents.remove(0); // Always remove the class itself, which is always first
+        // If the list of parents is non-empty, the first element is the class itself which should be removed
+        if (!parents.isEmpty())
+            parents.remove(0);
         return parents;
     }
 
@@ -236,85 +239,4 @@ public class ClassInfoComparer {
         return parents;
     }
 
-    public static class Results {
-        public final String className;
-        private List<String> incompatibilities;
-        private List<MethodIncompatibility> methodIncompatibilities;
-        private List<FieldIncompatibility> fieldIncompatibilities;
-
-        Results(String className) {
-            this.className = className;
-        }
-
-        void addIncompatibility(String incompatibility) {
-            if (this.incompatibilities == null) {
-                this.incompatibilities = new ArrayList<>();
-            }
-
-            this.incompatibilities.add(incompatibility);
-        }
-
-        void addIncompatibility(MethodInfo methodInfo, String incompatibility) {
-            if (this.methodIncompatibilities == null) {
-                this.methodIncompatibilities = new ArrayList<>();
-            }
-
-            this.methodIncompatibilities.add(new MethodIncompatibility(methodInfo, incompatibility));
-            addIncompatibility(methodInfo.getNameDesc() + " - " + incompatibility);
-        }
-
-        void addIncompatibility(FieldInfo fieldInfo, String incompatibility) {
-            if (this.fieldIncompatibilities == null) {
-                this.fieldIncompatibilities = new ArrayList<>();
-            }
-
-            this.fieldIncompatibilities.add(new FieldIncompatibility(fieldInfo, incompatibility));
-            addIncompatibility(fieldInfo.getNameDesc() + " - " + incompatibility);
-        }
-
-        public boolean isCompatible() {
-            return this.incompatibilities == null || this.incompatibilities.isEmpty();
-        }
-
-        public boolean isIncompatible() {
-            return this.incompatibilities != null && !this.incompatibilities.isEmpty();
-        }
-
-        public List<String> getIncompatibilities() {
-            return this.incompatibilities == null ? ImmutableList.of() : this.incompatibilities;
-        }
-
-        public List<MethodIncompatibility> getMethodIncompatibilities() {
-            return this.methodIncompatibilities == null ? ImmutableList.of() : this.methodIncompatibilities;
-        }
-
-        public List<FieldIncompatibility> getFieldIncompatibilities() {
-            return this.fieldIncompatibilities == null ? ImmutableList.of() : this.fieldIncompatibilities;
-        }
-
-        @Override
-        public String toString() {
-            return this.incompatibilities == null ? "[]" : this.incompatibilities.toString();
-        }
-    }
-
-    public static class MethodIncompatibility {
-        public final MethodInfo methodInfo;
-        public final String message;
-
-        public MethodIncompatibility(MethodInfo methodInfo, String message) {
-            this.methodInfo = methodInfo;
-            this.message = message;
-        }
-    }
-
-    public static class FieldIncompatibility {
-        public final FieldInfo fieldInfo;
-        public final String message;
-
-        public FieldIncompatibility(FieldInfo fieldInfo, String message) {
-            this.fieldInfo = fieldInfo;
-            this.message = message;
-        }
-    }
 }

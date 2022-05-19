@@ -7,6 +7,8 @@ package net.minecraftforge.jarcompatibilitychecker;
 
 import net.minecraftforge.jarcompatibilitychecker.core.ClassInfoCache;
 import net.minecraftforge.jarcompatibilitychecker.core.ClassInfoComparer;
+import net.minecraftforge.jarcompatibilitychecker.core.ClassInfoComparisonResults;
+import net.minecraftforge.jarcompatibilitychecker.core.Incompatibility;
 import net.minecraftforge.jarcompatibilitychecker.data.ClassInfo;
 
 import java.io.File;
@@ -78,7 +80,7 @@ public class JarCompatibilityChecker {
         List<File> concreteFiles = new ArrayList<>(this.concreteLibs);
         concreteFiles.addAll(this.commonLibs);
         ClassInfoCache concreteCache = ClassInfoCache.fromJarFile(this.inputJar, concreteFiles);
-        List<ClassInfoComparer.Results> classIncompatibilities = new ArrayList<>();
+        List<ClassInfoComparisonResults> classIncompatibilities = new ArrayList<>();
 
         for (Map.Entry<String, ClassInfo> baseEntry : baseCache.getMainClasses().entrySet()) {
             String baseClassName = baseEntry.getKey();
@@ -86,20 +88,20 @@ public class JarCompatibilityChecker {
             ClassInfo concreteClassInfo = concreteCache.getMainClassInfo(baseClassName);
 
             // log("Comparing " + baseClassName);
-            ClassInfoComparer.Results results = ClassInfoComparer.compare(this.checkBinary, baseCache, baseClassInfo, concreteCache, concreteClassInfo);
+            ClassInfoComparisonResults results = ClassInfoComparer.compare(this.checkBinary, baseCache, baseClassInfo, concreteCache, concreteClassInfo);
             if (results.isIncompatible())
                 classIncompatibilities.add(results);
         }
 
         if (!classIncompatibilities.isEmpty()) {
             int count = 0;
-            for (ClassInfoComparer.Results compareResults : classIncompatibilities) {
+            for (ClassInfoComparisonResults compareResults : classIncompatibilities) {
                 count += compareResults.getIncompatibilities().size();
             }
             logError("Incompatibilities found: " + count);
-            for (ClassInfoComparer.Results compareResults : classIncompatibilities) {
-                logError(compareResults.className + ":");
-                for (String incompatibility : compareResults.getIncompatibilities()) {
+            for (ClassInfoComparisonResults compareResults : classIncompatibilities) {
+                logError(compareResults.classInfo.name + ":");
+                for (Incompatibility<?> incompatibility : compareResults.getIncompatibilities()) {
                     logError("- " + incompatibility);
                 }
             }

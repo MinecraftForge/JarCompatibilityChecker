@@ -19,7 +19,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MethodInfo {
+public class MethodInfo implements MemberInfo {
     public final String name;
     public final String desc;
     public final int access;
@@ -112,6 +112,21 @@ public class MethodInfo {
 
     public boolean hasOverride() {
         return this.override != null;
+    }
+
+    @Override
+    public String getName() {
+        return this.name;
+    }
+
+    @Override
+    public String getDescriptor() {
+        return this.desc;
+    }
+
+    @Override
+    public int getAccess() {
+        return this.access;
     }
 
     public String getNameDesc() {

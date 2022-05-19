@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class ClassInfo {
+public class ClassInfo implements MemberInfo {
     public final String name;
     public final int access;
     public final String superName;
@@ -103,5 +103,21 @@ public class ClassInfo {
     @Nullable
     public FieldInfo getField(String name) {
         return this.fields == null ? null : this.fields.get(name);
+    }
+
+    @Override
+    public String getName() {
+        return this.name;
+    }
+
+    @Nullable
+    @Override
+    public String getDescriptor() {
+        return null;
+    }
+
+    @Override
+    public int getAccess() {
+        return this.access;
     }
 }
