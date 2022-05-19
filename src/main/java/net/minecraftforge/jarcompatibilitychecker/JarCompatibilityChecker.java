@@ -57,6 +57,7 @@ public class JarCompatibilityChecker {
      * @return the number of incompatibilities detected based on the current mode
      */
     public int check() throws IOException {
+        log("Compatibility mode: " + (this.checkBinary ? "Binary" : "API"));
         log("Base JAR: " + this.baseJar.getAbsolutePath());
         log("Input JAR: " + this.inputJar.getAbsolutePath());
         for (File baseLib : this.baseLibs) {

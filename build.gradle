@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'maven-publish'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
     id 'org.cadixdev.licenser' version '0.6.1'
     id 'net.minecraftforge.gradleutils' version '2.+'
 }
@@ -29,11 +30,14 @@ dependencies {
     implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
     implementation 'com.google.code.gson:gson:2.9.0'
     implementation 'com.google.guava:guava:31.1-jre'
-
-    compileOnly 'org.jetbrains:annotations:13.0'
+    implementation 'org.jetbrains:annotations:23.0.0'
 }
 
 jar {
+    from(project.rootDir) {
+        include 'LICENSE'
+    }
+
     manifest {
         attributes([
                 'Main-Class': 'net.minecraftforge.jarcompatibilitychecker.ConsoleTool',
@@ -41,6 +45,19 @@ jar {
         ])
     }
 }
+
+shadowJar {
+    from(project.rootDir) {
+        include 'LICENSE'
+    }
+
+    minimize()
+
+    exclude 'META-INF/LICENSE.txt'
+    exclude 'META-INF/versions/9/module-info.class'
+}
+
+assemble.dependsOn shadowJar
 
 java.withSourcesJar()
 

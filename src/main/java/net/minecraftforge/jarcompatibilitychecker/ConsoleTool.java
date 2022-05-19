@@ -19,7 +19,7 @@ public class ConsoleTool {
     public static void main(String[] args) throws IOException {
         OptionParser parser = new OptionParser();
         OptionSpec<Void> apiO = parser.accepts("api", "Enables the API compatibility checking mode");
-        OptionSpec<Void> binaryO = parser.accepts("api", "Enables the binary compatibility checking mode. This option will override the API compatibility flag. Defaults to true.");
+        OptionSpec<Void> binaryO = parser.accepts("binary", "Enables the binary compatibility checking mode. This option will override the API compatibility flag. Defaults to true.");
         OptionSpec<File> baseJarO  = parser.accepts("base-jar",  "Base JAR file that will be matched against for compatibility").withRequiredArg().ofType(File.class).required();
         OptionSpec<File> inputJarO  = parser.accepts("input-jar",  "JAR file to validate against the base JAR").withRequiredArg().ofType(File.class).required();
         OptionSpec<File> libO = parser.acceptsAll(ImmutableList.of("lib", "library"), "Libraries that the base JAR and input JAR both use").withRequiredArg().ofType(File.class);
