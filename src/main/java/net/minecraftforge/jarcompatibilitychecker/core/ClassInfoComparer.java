@@ -24,7 +24,7 @@ import java.util.Queue;
 import java.util.Set;
 
 public class ClassInfoComparer {
-    public static Results compare(boolean checkBinary, ClassInfo baseClassInfo, ClassInfoCache concreteCache, @Nullable ClassInfo concreteClassInfo) {
+    public static Results compare(boolean checkBinary, ClassInfoCache baseCache, ClassInfo baseClassInfo, ClassInfoCache concreteCache, @Nullable ClassInfo concreteClassInfo) {
         Results results = new Results(baseClassInfo.name);
 
         if (concreteClassInfo == null) {
@@ -46,7 +46,7 @@ public class ClassInfoComparer {
             results.addIncompatibility("Class missing superclass of " + baseClassInfo.superName);
         }
 
-        Set<String> baseInterfaces = new HashSet<>(getParentClassNames(concreteCache, concreteClassInfo, false));
+        Set<String> baseInterfaces = new HashSet<>(getParentClassNames(baseCache, baseClassInfo, false));
         Set<String> concreteInterfaces = new HashSet<>(getParentClassNames(concreteCache, concreteClassInfo, false));
 
         Set<String> missingInterfaces = Sets.difference(baseInterfaces, concreteInterfaces);
@@ -213,7 +213,9 @@ public class ClassInfoComparer {
         }
 
         // TODO Should this use a secondary comparator which sorts by declaration order?
-        return TopologicalSort.topologicalSort(parentGraph, null);
+        List<String> parents = TopologicalSort.topologicalSort(parentGraph, null);
+        parents.remove(0); // Always remove the class itself, which is always first
+        return parents;
     }
 
     /**
@@ -237,6 +239,8 @@ public class ClassInfoComparer {
     public static class Results {
         public final String className;
         private List<String> incompatibilities;
+        private List<MethodIncompatibility> methodIncompatibilities;
+        private List<FieldIncompatibility> fieldIncompatibilities;
 
         Results(String className) {
             this.className = className;
@@ -251,10 +255,20 @@ public class ClassInfoComparer {
         }
 
         void addIncompatibility(MethodInfo methodInfo, String incompatibility) {
+            if (this.methodIncompatibilities == null) {
+                this.methodIncompatibilities = new ArrayList<>();
+            }
+
+            this.methodIncompatibilities.add(new MethodIncompatibility(methodInfo, incompatibility));
             addIncompatibility(methodInfo.getNameDesc() + " - " + incompatibility);
         }
 
         void addIncompatibility(FieldInfo fieldInfo, String incompatibility) {
+            if (this.fieldIncompatibilities == null) {
+                this.fieldIncompatibilities = new ArrayList<>();
+            }
+
+            this.fieldIncompatibilities.add(new FieldIncompatibility(fieldInfo, incompatibility));
             addIncompatibility(fieldInfo.getNameDesc() + " - " + incompatibility);
         }
 
@@ -268,6 +282,39 @@ public class ClassInfoComparer {
 
         public List<String> getIncompatibilities() {
             return this.incompatibilities == null ? ImmutableList.of() : this.incompatibilities;
+        }
+
+        public List<MethodIncompatibility> getMethodIncompatibilities() {
+            return this.methodIncompatibilities == null ? ImmutableList.of() : this.methodIncompatibilities;
+        }
+
+        public List<FieldIncompatibility> getFieldIncompatibilities() {
+            return this.fieldIncompatibilities == null ? ImmutableList.of() : this.fieldIncompatibilities;
+        }
+
+        @Override
+        public String toString() {
+            return this.incompatibilities == null ? "[]" : this.incompatibilities.toString();
+        }
+    }
+
+    public static class MethodIncompatibility {
+        public final MethodInfo methodInfo;
+        public final String message;
+
+        public MethodIncompatibility(MethodInfo methodInfo, String message) {
+            this.methodInfo = methodInfo;
+            this.message = message;
+        }
+    }
+
+    public static class FieldIncompatibility {
+        public final FieldInfo fieldInfo;
+        public final String message;
+
+        public FieldIncompatibility(FieldInfo fieldInfo, String message) {
+            this.fieldInfo = fieldInfo;
+            this.message = message;
         }
     }
 }

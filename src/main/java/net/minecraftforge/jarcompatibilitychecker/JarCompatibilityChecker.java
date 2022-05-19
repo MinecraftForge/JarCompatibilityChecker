@@ -32,7 +32,8 @@ public class JarCompatibilityChecker {
      * @param checkBinary if {@code true}, all members of the base jar including package-private and private will be checked for a match in the input jar.
      * Otherwise, only public and protected members of the base jar will be checked for a match in the input jar.
      */
-    public JarCompatibilityChecker(File baseJar, File inputJar, boolean checkBinary, List<File> commonLibs, List<File> baseLibs, List<File> concreteLibs, Consumer<String> stdLogger, Consumer<String> errLogger) {
+    public JarCompatibilityChecker(File baseJar, File inputJar, boolean checkBinary, List<File> commonLibs, List<File> baseLibs, List<File> concreteLibs, Consumer<String> stdLogger,
+            Consumer<String> errLogger) {
         this.baseJar = baseJar;
         this.inputJar = inputJar;
         this.checkBinary = checkBinary;
@@ -42,12 +43,13 @@ public class JarCompatibilityChecker {
         this.stdLogger = stdLogger;
         this.errLogger = errLogger;
     }
+
     private void log(String message) {
-        stdLogger.accept(message);
+        this.stdLogger.accept(message);
     }
 
     private void logError(String message) {
-        errLogger.accept(message);
+        this.errLogger.accept(message);
     }
 
     /**
@@ -72,10 +74,10 @@ public class JarCompatibilityChecker {
 
         List<File> baseFiles = new ArrayList<>(this.baseLibs);
         baseFiles.addAll(this.commonLibs);
-        ClassInfoCache baseCache = new ClassInfoCache(this.baseJar, baseFiles);
+        ClassInfoCache baseCache = ClassInfoCache.fromJarFile(this.baseJar, baseFiles);
         List<File> concreteFiles = new ArrayList<>(this.concreteLibs);
         concreteFiles.addAll(this.commonLibs);
-        ClassInfoCache concreteCache = new ClassInfoCache(this.inputJar, concreteFiles);
+        ClassInfoCache concreteCache = ClassInfoCache.fromJarFile(this.inputJar, concreteFiles);
         List<ClassInfoComparer.Results> classIncompatibilities = new ArrayList<>();
 
         for (Map.Entry<String, ClassInfo> baseEntry : baseCache.getMainClasses().entrySet()) {
@@ -84,7 +86,7 @@ public class JarCompatibilityChecker {
             ClassInfo concreteClassInfo = concreteCache.getMainClassInfo(baseClassName);
 
             // log("Comparing " + baseClassName);
-            ClassInfoComparer.Results results = ClassInfoComparer.compare(this.checkBinary, baseClassInfo, concreteCache, concreteClassInfo);
+            ClassInfoComparer.Results results = ClassInfoComparer.compare(this.checkBinary, baseCache, baseClassInfo, concreteCache, concreteClassInfo);
             if (results.isIncompatible())
                 classIncompatibilities.add(results);
         }
