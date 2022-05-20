@@ -12,6 +12,10 @@ version = gradleutils.getTagOffsetVersion()
 println('Version: ' + version)
 java.toolchain.languageVersion = JavaLanguageVersion.of(8)
 
+ext {
+    CHANGELOG_TAG = '0.1'
+}
+
 license {
     header project.file('LICENSE-header.txt')
     include 'net/minecraftforge/jarcompatibilitychecker/**/*.java'
@@ -69,7 +73,7 @@ tasks.withType(JavaCompile).configureEach {
 
 publishing {
     publications {
-        pluginMaven(MavenPublication) {
+        mavenJava(MavenPublication) {
             from components.java
 
             pom {
@@ -110,5 +114,5 @@ publishing {
 }
 
 changelog {
-    fromTag '0.1'
+    fromTag CHANGELOG_TAG
 }
