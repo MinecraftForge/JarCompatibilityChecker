@@ -108,3 +108,7 @@ publishing {
         maven gradleutils.getPublishingForgeMaven()
     }
 }
+
+changelog {
+    fromTag '0.1'
+}
