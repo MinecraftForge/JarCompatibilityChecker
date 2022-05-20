@@ -34,6 +34,25 @@ public abstract class BaseCompatibilityTest {
         }
     }
 
+    protected void assertIncompatible(boolean checkBinary, String folder, String className, IncompatibilityData... testIncompatibilities) {
+        if (testIncompatibilities.length == 0)
+            throw new IllegalArgumentException("Must provide at least one incompatibility to test");
+
+        ClassInfoComparisonResults comparisonResults = getComparisonResults(checkBinary, folder, className);
+        Assert.assertFalse(className + " was compatible when incompatibilities were expected", comparisonResults.isCompatible());
+
+        List<Incompatibility<?>> incompatibilities = comparisonResults.getIncompatibilities();
+        Assert.assertEquals(className + " had the wrong number of incompatibilities: " + comparisonResults, testIncompatibilities.length, incompatibilities.size());
+
+        for (int i = 0; i < testIncompatibilities.length; i++) {
+            IncompatibilityData testData = testIncompatibilities[i];
+            Incompatibility<?> incompatibility = incompatibilities.get(i);
+            Assert.assertEquals(className + " had an incompatibility with the wrong name: " + incompatibility, testData.getName(), incompatibility.getInfo().getName());
+            Assert.assertEquals(className + " had an incompatibility with the wrong descriptor: " + incompatibility, testData.getDesc(), incompatibility.getInfo().getDescriptor());
+            Assert.assertEquals(className + " had an incompatibility with the wrong message: " + incompatibility, testData.getMessage(), incompatibility.getMessage());
+        }
+    }
+
     protected void assertClassIncompatible(boolean checkBinary, String folder, String className, String message, Object... formatArgs) {
         assertIncompatible(checkBinary, folder, className, className, null, message, formatArgs);
     }
@@ -76,6 +95,32 @@ public abstract class BaseCompatibilityTest {
             return ClassInfoComparer.compare(checkBinary, baseCache, baseClassInfo, inputCache, inputCache.getMainClassInfo(className));
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    protected static class IncompatibilityData {
+        private final String name;
+        @Nullable
+        private final String desc;
+        private final String message;
+
+        protected IncompatibilityData(String name, @Nullable String desc, String message, Object... formatArgs) {
+            this.name = name;
+            this.desc = desc;
+            this.message = formatArgs.length > 0 ? String.format(Locale.ROOT, message, formatArgs) : message;
+        }
+
+        protected String getName() {
+            return this.name;
+        }
+
+        @Nullable
+        protected String getDesc() {
+            return this.desc;
+        }
+
+        protected String getMessage() {
+            return this.message;
         }
     }
 }

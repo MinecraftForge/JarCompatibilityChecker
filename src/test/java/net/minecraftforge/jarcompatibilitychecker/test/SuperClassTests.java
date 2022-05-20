@@ -41,6 +41,20 @@ public class SuperClassTests extends BaseCompatibilityTest {
     }
 
     @Test
+    public void testApiMissingSuperClassPublicMember() {
+        // A missing package-private superclass is API compatible, but a missing public method from that superclass is API incompatible
+        assertIncompatible(false, "MissingSuperClassPublicMember", "A", "buzz", "()V", IncompatibilityMessages.API_METHOD_REMOVED);
+    }
+
+    @Test
+    public void testMissingSuperClassPublicMember() {
+        // A missing package-private superclass and a missing public method from that superclass are both binary incompatible
+        assertIncompatible(true, "MissingSuperClassPublicMember", "A",
+                new IncompatibilityData("A", null, IncompatibilityMessages.CLASS_MISSING_SUPERCLASS, "C"),
+                new IncompatibilityData("buzz", "()V", IncompatibilityMessages.METHOD_REMOVED));
+    }
+
+    @Test
     public void testApiNewSuperClass() {
         // Inserting a new superclass into a class hierarchy while preserving the old hierarchy is API compatible
         assertCompatible(false, "NewSuperClass", "A");
