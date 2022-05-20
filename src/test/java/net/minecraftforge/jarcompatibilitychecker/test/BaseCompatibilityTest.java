@@ -34,6 +34,10 @@ public abstract class BaseCompatibilityTest {
         }
     }
 
+    protected void assertClassIncompatible(boolean checkBinary, String folder, String className, String message, Object... formatArgs) {
+        assertIncompatible(checkBinary, folder, className, className, null, message, formatArgs);
+    }
+
     protected void assertIncompatible(boolean checkBinary, String folder, String className, String name, @Nullable String desc, String message, Object... formatArgs) {
         if (formatArgs.length > 0)
             message = String.format(Locale.ROOT, message, formatArgs);
@@ -66,10 +70,10 @@ public abstract class BaseCompatibilityTest {
             ClassInfoCache baseCache = ClassInfoCache.fromFolder(baseFolder);
             ClassInfoCache inputCache = ClassInfoCache.fromFolder(inputFolder);
 
-            ClassInfo baseClassInfo = baseCache.getClassInfo(className);
+            ClassInfo baseClassInfo = baseCache.getMainClassInfo(className);
             Assert.assertNotNull("Class with name " + className + " not found in " + baseFolder, baseClassInfo);
 
-            return ClassInfoComparer.compare(checkBinary, baseCache, baseClassInfo, inputCache, inputCache.getClassInfo(className));
+            return ClassInfoComparer.compare(checkBinary, baseCache, baseClassInfo, inputCache, inputCache.getMainClassInfo(className));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

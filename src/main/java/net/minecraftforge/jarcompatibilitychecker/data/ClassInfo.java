@@ -120,4 +120,9 @@ public class ClassInfo implements MemberInfo {
     public int getAccess() {
         return this.access;
     }
+
+    @Override
+    public String toString() {
+        return this.name;
+    }
 }

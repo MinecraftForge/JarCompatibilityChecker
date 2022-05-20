@@ -107,6 +107,8 @@ public class JarCompatibilityChecker {
             }
 
             return count;
+        } else {
+            log("No incompatibilities found");
         }
 
         return 0;

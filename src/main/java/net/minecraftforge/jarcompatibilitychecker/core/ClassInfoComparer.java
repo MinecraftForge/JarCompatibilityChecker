@@ -43,14 +43,27 @@ public class ClassInfoComparer {
             results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_LOWERED_VISIBILITY);
         }
 
-        if (baseClassInfo.superName != null && !hasSuperClass(concreteCache, concreteClassInfo, baseClassInfo.superName)) {
-            results.addClassIncompatibility(baseClassInfo, String.format(Locale.ROOT, IncompatibilityMessages.CLASS_MISSING_SUPERCLASS, baseClassInfo.superName));
+        if (baseClassInfo.superName != null) {
+            ClassInfo superClassInfo = baseCache.getClassInfo(baseClassInfo.superName);
+            // A missing superclass is always important to binary compatibility but only important to API compatibility if the superclass is public or protected
+            boolean shouldCheckSuper = checkBinary || (superClassInfo.access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0;
+            if (shouldCheckSuper && !hasSuperClass(concreteCache, concreteClassInfo, baseClassInfo.superName)) {
+                results.addClassIncompatibility(baseClassInfo, String.format(Locale.ROOT, IncompatibilityMessages.CLASS_MISSING_SUPERCLASS, baseClassInfo.superName));
+            }
         }
 
-        Set<String> baseInterfaces = new HashSet<>(getParentClassNames(baseCache, baseClassInfo, false));
-        Set<String> concreteInterfaces = new HashSet<>(getParentClassNames(concreteCache, concreteClassInfo, false));
+        Set<String> baseInterfaces = new HashSet<>(getParentClassNames(checkBinary, baseCache, baseClassInfo, false));
+        Set<String> concreteInterfaces = new HashSet<>(getParentClassNames(checkBinary, concreteCache, concreteClassInfo, false));
 
         Set<String> missingInterfaces = Sets.difference(baseInterfaces, concreteInterfaces);
+        if (!missingInterfaces.isEmpty() && !checkBinary) {
+            missingInterfaces = new HashSet<>(missingInterfaces);
+            missingInterfaces.removeIf(interfaceName -> {
+                ClassInfo interfaceInfo = baseCache.getClassInfo(interfaceName);
+                // A missing interface is only important to API compatibility if the interface is public or protected
+                return (interfaceInfo.access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) == 0;
+            });
+        }
         if (!missingInterfaces.isEmpty()) {
             if (missingInterfaces.size() == 1) {
                 results.addClassIncompatibility(baseClassInfo, String.format(Locale.ROOT, IncompatibilityMessages.CLASS_MISSING_INTERFACE, missingInterfaces.iterator().next()));
@@ -59,7 +72,7 @@ public class ClassInfoComparer {
             }
         }
 
-        List<ClassInfo> concreteParents = getParentClassInfos(concreteCache, concreteClassInfo, true);
+        List<ClassInfo> concreteParents = getParentClassInfos(checkBinary, concreteCache, concreteClassInfo, true);
 
         for (MethodInfo baseInfo : baseClassInfo.getMethods().values()) {
             boolean isStatic = (baseInfo.access & Opcodes.ACC_STATIC) != 0;
@@ -171,12 +184,14 @@ public class ClassInfoComparer {
      * Returns a list of parent class names, both super classes and interfaces.
      * The list is sorted based on the topological order of the class hierarchy for each parent.
      *
+     * @param checkBinary if {@code true}, super classes of all visibilities will be included.
+     * Otherwise, only public and protected super classes will be included.
      * @param includeSuper if {@code true}, super classnames will be included.
      * Otherwise, only interfaces will be, including those present on super classes.
      * @return a list of parent class names, both super classes and interfaces
      */
     @SuppressWarnings("UnstableApiUsage")
-    public static List<String> getParentClassNames(ClassInfoCache cache, ClassInfo classInfo, boolean includeSuper) {
+    public static List<String> getParentClassNames(boolean checkBinary, ClassInfoCache cache, ClassInfo classInfo, boolean includeSuper) {
         List<String> interfaces = classInfo.getInterfaces();
         if (interfaces.isEmpty() && classInfo.superName == null)
             return ImmutableList.of();
@@ -192,10 +207,11 @@ public class ClassInfoComparer {
         while (superInfo.superName != null) {
             ClassInfo currentInfo = superInfo;
             superInfo = cache.getClassInfo(superInfo.superName);
-            if (includeSuper)
+            boolean include = includeSuper && (checkBinary || (currentInfo.access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0);
+            if (include)
                 parentGraph.putEdge(currentInfo.name, superInfo.name);
             for (String parentInterfaceName : superInfo.getInterfaces()) {
-                parentGraph.putEdge(includeSuper ? superInfo.name : classInfo.name, parentInterfaceName);
+                parentGraph.putEdge(include ? superInfo.name : classInfo.name, parentInterfaceName);
                 interfaceQueue.add(parentInterfaceName);
             }
         }
@@ -225,14 +241,16 @@ public class ClassInfoComparer {
      * Returns a list of parent class infos, both super classes and interfaces.
      * The list is sorted based on the topological order of the class hierarchy for each parent.
      *
+     * @param checkBinary if {@code true}, super classes of all visibilities will be included.
+     * Otherwise, only public and protected super classes will be included.
      * @param includeSuper if {@code true}, super class infos will be included.
      * Otherwise, only interfaces will be, including those present on super classes.
      * @return a list of parent class infos, both super classes and interfaces
      */
-    public static List<ClassInfo> getParentClassInfos(ClassInfoCache cache, ClassInfo classInfo, boolean includeSuper) {
+    public static List<ClassInfo> getParentClassInfos(boolean checkBinary, ClassInfoCache cache, ClassInfo classInfo, boolean includeSuper) {
         List<ClassInfo> parents = new ArrayList<>();
 
-        for (String parentName : getParentClassNames(cache, classInfo, includeSuper)) {
+        for (String parentName : getParentClassNames(checkBinary, cache, classInfo, includeSuper)) {
             parents.add(cache.getClassInfo(parentName));
         }
 
