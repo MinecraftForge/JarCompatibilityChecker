@@ -10,6 +10,8 @@ import joptsimple.OptionException;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
+import joptsimple.util.EnumConverter;
+import net.minecraftforge.jarcompatibilitychecker.core.AnnotationCheckMode;
 
 import java.io.File;
 import java.util.List;
@@ -25,6 +27,8 @@ public class ConsoleTool {
             OptionSpec<File> libO = parser.acceptsAll(ImmutableList.of("lib", "library"), "Libraries that the base JAR and input JAR both use").withRequiredArg().ofType(File.class);
             OptionSpec<File> baseLibO = parser.acceptsAll(ImmutableList.of("base-lib", "base-library"), "Libraries that only the base JAR uses").withRequiredArg().ofType(File.class);
             OptionSpec<File> concreteLibO = parser.acceptsAll(ImmutableList.of("concrete-lib", "concrete-library"), "Libraries that only the input JAR uses").withRequiredArg().ofType(File.class);
+            OptionSpec<AnnotationCheckMode> annotationCheckModeO = parser.acceptsAll(ImmutableList.of("annotation-check-mode", "ann-mode"), "What mode to use for checking annotations")
+                    .withRequiredArg().withValuesConvertedBy(new EnumConverter<AnnotationCheckMode>(AnnotationCheckMode.class) {});
 
             OptionSet options;
             try {
@@ -43,9 +47,11 @@ public class ConsoleTool {
             List<File> baseLibs = options.valuesOf(baseLibO);
             List<File> concreteLibs = options.valuesOf(concreteLibO);
             boolean checkBinary = !options.has(apiO) || options.has(binaryO);
+            AnnotationCheckMode annotationCheckMode = options.valueOf(annotationCheckModeO);
 
             // TODO allow logging to a file
-            JarCompatibilityChecker checker = new JarCompatibilityChecker(baseJar, inputJar, checkBinary, commonLibs, baseLibs, concreteLibs, System.out::println, System.err::println);
+            JarCompatibilityChecker checker = new JarCompatibilityChecker(baseJar, inputJar, checkBinary, annotationCheckMode, commonLibs, baseLibs, concreteLibs,
+                    System.out::println, System.err::println);
 
             System.exit(checker.check());
         } catch (Exception e) {

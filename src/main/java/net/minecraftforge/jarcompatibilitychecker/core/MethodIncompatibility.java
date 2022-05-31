@@ -31,6 +31,6 @@ public class MethodIncompatibility implements Incompatibility<MethodInfo> {
 
     @Override
     public String toString() {
-        return this.methodInfo.getNameDesc() + " - " + this.message;
+        return this.methodInfo + " - " + this.message;
     }
 }

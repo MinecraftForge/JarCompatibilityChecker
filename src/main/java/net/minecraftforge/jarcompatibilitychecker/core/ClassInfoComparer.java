@@ -9,8 +9,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.MutableGraph;
+import net.minecraftforge.jarcompatibilitychecker.data.AnnotationInfo;
 import net.minecraftforge.jarcompatibilitychecker.data.ClassInfo;
 import net.minecraftforge.jarcompatibilitychecker.data.FieldInfo;
+import net.minecraftforge.jarcompatibilitychecker.data.MemberInfo;
 import net.minecraftforge.jarcompatibilitychecker.data.MethodInfo;
 import net.minecraftforge.jarcompatibilitychecker.sort.TopologicalSort;
 import org.jetbrains.annotations.Nullable;
@@ -19,13 +21,20 @@ import org.objectweb.asm.Opcodes;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Queue;
 import java.util.Set;
 
 public class ClassInfoComparer {
-    public static ClassInfoComparisonResults compare(boolean checkBinary, ClassInfoCache baseCache, ClassInfo baseClassInfo, ClassInfoCache concreteCache, @Nullable ClassInfo concreteClassInfo) {
+    public static ClassInfoComparisonResults compare(boolean checkBinary, ClassInfoCache baseCache, ClassInfo baseClassInfo, ClassInfoCache concreteCache,
+            @Nullable ClassInfo concreteClassInfo) {
+        return compare(checkBinary, null, baseCache, baseClassInfo, concreteCache, concreteClassInfo);
+    }
+
+    public static ClassInfoComparisonResults compare(boolean checkBinary, @Nullable AnnotationCheckMode annotationCheckMode, ClassInfoCache baseCache, ClassInfo baseClassInfo,
+            ClassInfoCache concreteCache, @Nullable ClassInfo concreteClassInfo) {
         ClassInfoComparisonResults results = new ClassInfoComparisonResults(baseClassInfo);
 
         if (concreteClassInfo == null) {
@@ -42,6 +51,8 @@ public class ClassInfoComparer {
         if (isVisibilityLowered(checkBinary, baseClassInfo.access, concreteClassInfo.access)) {
             results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_LOWERED_VISIBILITY);
         }
+
+        checkAnnotations(annotationCheckMode, results, baseClassInfo, baseClassInfo.annotations, concreteClassInfo.annotations);
 
         if (baseClassInfo.superName != null) {
             ClassInfo superClassInfo = baseCache.getClassInfo(baseClassInfo.superName);
@@ -94,6 +105,8 @@ public class ClassInfoComparer {
             if (isVisibilityLowered(checkBinary, baseInfo.access, inputInfo.access)) {
                 results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.METHOD_LOWERED_VISIBILITY);
             }
+
+            checkAnnotations(annotationCheckMode, results, baseInfo, baseInfo.annotations, inputInfo.annotations);
         }
 
         for (FieldInfo baseInfo : baseClassInfo.getFields().values()) {
@@ -116,6 +129,8 @@ public class ClassInfoComparer {
             if (isVisibilityLowered(checkBinary, baseInfo.access, inputInfo.access)) {
                 results.addFieldIncompatibility(baseInfo, IncompatibilityMessages.FIELD_LOWERED_VISIBILITY);
             }
+
+            checkAnnotations(annotationCheckMode, results, baseInfo, baseInfo.annotations, inputInfo.annotations);
         }
 
         return results;
@@ -131,6 +146,61 @@ public class ClassInfoComparer {
         boolean inputPrivate = (inputAccess & Opcodes.ACC_PRIVATE) != 0;
 
         return (basePublic && !inputPublic) || (baseProtected && !inputProtected && !inputPublic) || (checkBinary && !basePrivate && inputPrivate);
+    }
+
+    public static <I extends MemberInfo> void checkAnnotations(@Nullable AnnotationCheckMode mode, ClassInfoComparisonResults results, I memberInfo, List<AnnotationInfo> baseAnnotations,
+            List<AnnotationInfo> concreteAnnotations) {
+        if (mode == null || (baseAnnotations.isEmpty() && concreteAnnotations.isEmpty()))
+            return;
+
+        // boolean requiresExact = mode.requiresExact();
+        // List<AnnotationInfo> concreteCopy = new ArrayList<>(concreteAnnotations);
+        //
+        // for (AnnotationInfo baseAnnotation : baseAnnotations) {
+        //     AnnotationInfo descMatch = null;
+        //     boolean foundMatch = false;
+        //     for (Iterator<AnnotationInfo> iterator = concreteCopy.iterator(); iterator.hasNext(); ) {
+        //         AnnotationInfo concreteAnnotation = iterator.next();
+        //         if (baseAnnotation.equals(concreteAnnotation)) {
+        //             iterator.remove();
+        //             descMatch = concreteAnnotation;
+        //             foundMatch = true;
+        //         } else if (baseAnnotation.desc.equals(concreteAnnotation.desc)) {
+        //             if (!requiresExact) {
+        //                 iterator.remove();
+        //                 foundMatch = true;
+        //             }
+        //             descMatch = concreteAnnotation;
+        //         }
+        //     }
+        //
+        //     if (!foundMatch) {
+        //         results.addAnnotationIncompatibility(mode, memberInfo, baseAnnotation, descMatch != null
+        //                 ? String.format(Locale.ROOT, IncompatibilityMessages.ANNOTATION_CHANGED, descMatch)
+        //                 : IncompatibilityMessages.ANNOTATION_REMOVED);
+        //     }
+        // }
+
+        if (mode.checkAddition()) {
+            List<AnnotationInfo> baseCopy = new ArrayList<>(baseAnnotations);
+
+            for (AnnotationInfo concreteAnnotation : concreteAnnotations) {
+                AnnotationInfo match = null;
+                for (Iterator<AnnotationInfo> iterator = baseCopy.iterator(); iterator.hasNext(); ) {
+                    AnnotationInfo baseAnnotation = iterator.next();
+                    if (concreteAnnotation.equals(baseAnnotation) || concreteAnnotation.desc.equals(baseAnnotation.desc)) {
+                        iterator.remove();
+                        match = baseAnnotation;
+                        break;
+                    }
+                }
+
+                if (match == null) {
+                    // No match found for concrete annotation in base JAR; this means a new annotation was found
+                    results.addAnnotationIncompatibility(mode, memberInfo, concreteAnnotation, IncompatibilityMessages.ANNOTATION_ADDED);
+                }
+            }
+        }
     }
 
     public static boolean hasSuperClass(ClassInfoCache cache, ClassInfo classInfo, String superClass) {

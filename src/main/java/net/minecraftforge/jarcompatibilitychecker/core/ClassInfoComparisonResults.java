@@ -6,8 +6,10 @@
 package net.minecraftforge.jarcompatibilitychecker.core;
 
 import com.google.common.collect.ImmutableList;
+import net.minecraftforge.jarcompatibilitychecker.data.AnnotationInfo;
 import net.minecraftforge.jarcompatibilitychecker.data.ClassInfo;
 import net.minecraftforge.jarcompatibilitychecker.data.FieldInfo;
+import net.minecraftforge.jarcompatibilitychecker.data.MemberInfo;
 import net.minecraftforge.jarcompatibilitychecker.data.MethodInfo;
 
 import java.util.ArrayList;
@@ -39,6 +41,10 @@ public class ClassInfoComparisonResults {
 
     void addFieldIncompatibility(FieldInfo fieldInfo, String message) {
         addIncompatibility(new FieldIncompatibility(fieldInfo, message));
+    }
+
+    <I extends MemberInfo> void addAnnotationIncompatibility(AnnotationCheckMode mode, I memberInfo, AnnotationInfo annotationInfo, String message) {
+        addIncompatibility(new AnnotationIncompatibility<>(memberInfo, annotationInfo, message, mode.shouldError()));
     }
 
     public boolean isCompatible() {

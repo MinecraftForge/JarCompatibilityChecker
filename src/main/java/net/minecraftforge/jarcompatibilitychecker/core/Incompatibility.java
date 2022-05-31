@@ -14,4 +14,8 @@ public interface Incompatibility<I extends MemberInfo> {
 
     @NotNull
     String getMessage();
+
+    default boolean isError() {
+        return true;
+    }
 }

@@ -5,6 +5,9 @@
 
 package net.minecraftforge.jarcompatibilitychecker.data;
 
+import com.google.common.collect.ImmutableList;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -23,6 +26,7 @@ public class MethodInfo implements MemberInfo {
     public final String name;
     public final String desc;
     public final int access;
+    public final List<AnnotationInfo> annotations;
     public final List<String> exceptions;
     public final ClassInfo parent;
     public final Bouncer bouncer;
@@ -32,6 +36,7 @@ public class MethodInfo implements MemberInfo {
         this.name = node.name;
         this.desc = node.desc;
         this.access = node.access;
+        this.annotations = AnnotationInfo.create(node.visibleAnnotations, node.invisibleAnnotations);
         this.exceptions = node.exceptions.isEmpty() ? null : new ArrayList<>(node.exceptions);
         this.parent = parent;
         this.bouncer = getBouncer(parent, node);
@@ -82,6 +87,7 @@ public class MethodInfo implements MemberInfo {
         this.name = method.getName();
         this.desc = Type.getMethodDescriptor(method);
         this.access = method.getModifiers();
+        this.annotations = ImmutableList.of();
         List<String> execs = new ArrayList<>();
         for (Class<?> e : method.getExceptionTypes())
             execs.add(e.getName().replace('.', '/'));
@@ -94,6 +100,7 @@ public class MethodInfo implements MemberInfo {
         this.name = "<init>";
         this.desc = Type.getConstructorDescriptor(constructor);
         this.access = constructor.getModifiers();
+        this.annotations = ImmutableList.of();
         List<String> execs = new ArrayList<>();
         for (Class<?> e : constructor.getExceptionTypes())
             execs.add(e.getName().replace('.', '/'));
@@ -114,11 +121,13 @@ public class MethodInfo implements MemberInfo {
         return this.override != null;
     }
 
+    @NotNull
     @Override
     public String getName() {
         return this.name;
     }
 
+    @Nullable
     @Override
     public String getDescriptor() {
         return this.desc;
@@ -129,12 +138,14 @@ public class MethodInfo implements MemberInfo {
         return this.access;
     }
 
-    public String getNameDesc() {
-        return this.name + this.desc;
+    @NotNull
+    @Override
+    public List<AnnotationInfo> getAnnotations() {
+        return this.annotations;
     }
 
     @Override
     public String toString() {
-        return this.parent.name + "/" + this.name + this.desc;
+        return this.name + this.desc;
     }
 }

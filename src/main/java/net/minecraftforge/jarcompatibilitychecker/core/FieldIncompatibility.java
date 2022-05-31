@@ -31,6 +31,6 @@ public class FieldIncompatibility implements Incompatibility<FieldInfo> {
 
     @Override
     public String toString() {
-        return this.fieldInfo.getNameDesc() + " - " + this.message;
+        return this.fieldInfo + " - " + this.message;
     }
 }

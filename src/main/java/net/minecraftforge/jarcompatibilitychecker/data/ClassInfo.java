@@ -25,6 +25,7 @@ public class ClassInfo implements MemberInfo {
     public final String name;
     public final int access;
     public final String superName;
+    public final List<AnnotationInfo> annotations;
     private final List<String> interfaces;
     private final Map<String, MethodInfo> methods;
     private final Map<String, FieldInfo> fields;
@@ -40,6 +41,7 @@ public class ClassInfo implements MemberInfo {
     public ClassInfo(ClassNode node) {
         this.name = node.name;
         this.access = node.access;
+        this.annotations = AnnotationInfo.create(node.visibleAnnotations, node.invisibleAnnotations);
         this.superName = node.superName;
         this.interfaces = node.interfaces.isEmpty() ? null : node.interfaces;
 
@@ -57,6 +59,7 @@ public class ClassInfo implements MemberInfo {
     public ClassInfo(Class<?> clazz) {
         this.name = clazz.getName().replace('.', '/');
         this.access = clazz.getModifiers();
+        this.annotations = ImmutableList.of();
         this.superName = clazz.getSuperclass() == null ? null : clazz.getSuperclass().getName().replace('.', '/');
         List<String> intfs = new ArrayList<>();
         for (Class<?> i : clazz.getInterfaces())
@@ -105,6 +108,7 @@ public class ClassInfo implements MemberInfo {
         return this.fields == null ? null : this.fields.get(name);
     }
 
+    @NotNull
     @Override
     public String getName() {
         return this.name;
@@ -119,6 +123,12 @@ public class ClassInfo implements MemberInfo {
     @Override
     public int getAccess() {
         return this.access;
+    }
+
+    @NotNull
+    @Override
+    public List<AnnotationInfo> getAnnotations() {
+        return this.annotations;
     }
 
     @Override
