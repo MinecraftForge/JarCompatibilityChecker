@@ -53,7 +53,9 @@ public class ConsoleTool {
             JarCompatibilityChecker checker = new JarCompatibilityChecker(baseJar, inputJar, checkBinary, annotationCheckMode, commonLibs, baseLibs, concreteLibs,
                     System.out::println, System.err::println);
 
-            System.exit(checker.check());
+            int incompatibilities = checker.check();
+            // Clamp to a max of 125 to prevent conflicting with special meaning exit codes - https://tldp.org/LDP/abs/html/exitcodes.html
+            System.exit(Math.min(125, incompatibilities));
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(-1);
