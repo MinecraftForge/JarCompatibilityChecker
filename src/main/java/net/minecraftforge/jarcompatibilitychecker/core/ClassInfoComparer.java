@@ -52,6 +52,11 @@ public class ClassInfoComparer {
             results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_LOWERED_VISIBILITY);
         }
 
+        boolean classVisible = checkBinary || (baseClassInfo.access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0;
+        if (isMadeAbstract(classVisible, baseClassInfo.access, concreteClassInfo.access)) {
+            results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_MADE_ABSTRACT);
+        }
+
         checkAnnotations(annotationCheckMode, results, baseClassInfo, baseClassInfo.annotations, concreteClassInfo.annotations);
 
         if (baseClassInfo.superName != null) {
@@ -85,6 +90,8 @@ public class ClassInfoComparer {
 
         List<ClassInfo> concreteParents = getParentClassInfos(checkBinary, concreteCache, concreteClassInfo, true);
 
+        Set<MethodInfo> seenMethods = new HashSet<>();
+
         for (MethodInfo baseInfo : baseClassInfo.getMethods().values()) {
             boolean isStatic = (baseInfo.access & Opcodes.ACC_STATIC) != 0;
             MethodInfo inputInfo = getMethodInfo(concreteClassInfo, concreteParents, isStatic, baseInfo.name, baseInfo.desc);
@@ -102,8 +109,14 @@ public class ClassInfoComparer {
                 continue;
             }
 
+            seenMethods.add(inputInfo);
+
             if (isVisibilityLowered(checkBinary, baseInfo.access, inputInfo.access)) {
                 results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.METHOD_LOWERED_VISIBILITY);
+            }
+
+            if (isMadeAbstract(classVisible, baseInfo.access, inputInfo.access)) {
+                results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.METHOD_MADE_ABSTRACT);
             }
 
             checkAnnotations(annotationCheckMode, results, baseInfo, baseInfo.annotations, inputInfo.annotations);
@@ -146,6 +159,11 @@ public class ClassInfoComparer {
         boolean inputPrivate = (inputAccess & Opcodes.ACC_PRIVATE) != 0;
 
         return (basePublic && !inputPublic) || (baseProtected && !inputProtected && !inputPublic) || (checkBinary && !basePrivate && inputPrivate);
+    }
+
+    public static boolean isMadeAbstract(boolean classVisible, int baseAccess, int inputAccess) {
+        // Even if this is a method which is not visible from outside the JAR, issues can still appear at runtime due to an implementation class not being able to implement the package-private method.
+        return classVisible && (baseAccess & Opcodes.ACC_ABSTRACT) == 0 && (inputAccess & Opcodes.ACC_ABSTRACT) != 0;
     }
 
     public static <I extends MemberInfo> void checkAnnotations(@Nullable AnnotationCheckMode mode, ClassInfoComparisonResults results, I memberInfo, List<AnnotationInfo> baseAnnotations,

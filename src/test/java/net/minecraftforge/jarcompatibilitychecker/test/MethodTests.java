@@ -30,14 +30,38 @@ public class MethodTests extends BaseCompatibilityTest {
 
     @Test
     public void testApiNewMethod() {
-        // Adding a new method is API compatible
+        // Adding a new non-abstract method is API compatible
         assertCompatible(false, "NewMethod", "A");
     }
 
     @Test
     public void testNewMethod() {
-        // Adding a new method is binary compatible
+        // Adding a new non-abstract method is binary compatible
         assertCompatible(true, "NewMethod", "A");
+    }
+
+    @Test
+    public void testApiPackagePrivateMethodMadeAbstract() {
+        // Making a package-private method abstract in a public abstract class is API incompatible due to potential issues with external implementations of that class
+        assertIncompatible(false, "PackagePrivateMethodMadeAbstract", "A", "thing", "()V", IncompatibilityMessages.METHOD_MADE_ABSTRACT);
+    }
+
+    @Test
+    public void testPackagePrivateMethodMadeAbstract() {
+        // Making a package-private method abstract in a public abstract class is binary incompatible
+        assertIncompatible(true, "PackagePrivateMethodMadeAbstract", "A", "thing", "()V", IncompatibilityMessages.METHOD_MADE_ABSTRACT);
+    }
+
+    @Test
+    public void testApiPublicMethodMadeAbstract() {
+        // Making a public method abstract in a public abstract class is API incompatible
+        assertIncompatible(false, "PublicMethodMadeAbstract", "A", "thing", "()V", IncompatibilityMessages.METHOD_MADE_ABSTRACT);
+    }
+
+    @Test
+    public void testPublicMethodMadeAbstract() {
+        // Making a public method abstract in a public abstract class is binary incompatible
+        assertIncompatible(true, "PublicMethodMadeAbstract", "A", "thing", "()V", IncompatibilityMessages.METHOD_MADE_ABSTRACT);
     }
 
     @Test

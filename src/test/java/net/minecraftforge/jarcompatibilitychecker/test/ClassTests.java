@@ -51,4 +51,29 @@ public class ClassTests extends BaseCompatibilityTest {
         // Removing a public class is binary incompatible
         assertClassIncompatible(true, "MissingPublicClass", "A", IncompatibilityMessages.CLASS_MISSING);
     }
+
+    @Test
+    public void testApiPackagePrivateClassMadeAbstract() {
+        // Making a package-private class abstract is API compatible
+        assertCompatible(false, "PackagePrivateClassMadeAbstract", "A");
+    }
+
+    @Test
+    public void testPackagePrivateClassMadeAbstract() {
+        // Making a package-private class abstract is binary incompatible
+        assertClassIncompatible(true, "PackagePrivateClassMadeAbstract", "A", IncompatibilityMessages.CLASS_MADE_ABSTRACT);
+    }
+
+
+    @Test
+    public void testApiPublicClassMadeAbstract() {
+        // Making a public class abstract is API incompatible
+        assertClassIncompatible(false, "PublicClassMadeAbstract", "A", IncompatibilityMessages.CLASS_MADE_ABSTRACT);
+    }
+
+    @Test
+    public void testPublicClassMadeAbstract() {
+        // Making a public class abstract is binary incompatible
+        assertClassIncompatible(true, "PublicClassMadeAbstract", "A", IncompatibilityMessages.CLASS_MADE_ABSTRACT);
+    }
 }
