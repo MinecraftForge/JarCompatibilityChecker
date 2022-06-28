@@ -41,6 +41,30 @@ public class FieldTests extends BaseCompatibilityTest {
     }
 
     @Test
+    public void testApiPrivateFieldMadeFinal() {
+        // Making a private field final is API compatible
+        assertCompatible(false, "PrivateFieldMadeFinal", "A");
+    }
+
+    @Test
+    public void testPrivateFieldMadeFinal() {
+        // Making a private field final is binary incompatible
+        assertIncompatible(true, "PrivateFieldMadeFinal", "A", "buzz", "Z", IncompatibilityMessages.FIELD_MADE_FINAL);
+    }
+
+    @Test
+    public void testApiPublicFieldMadeFinal() {
+        // Making a public field final is API incompatible
+        assertIncompatible(false, "PublicFieldMadeFinal", "A", "buzz", "Z", IncompatibilityMessages.FIELD_MADE_FINAL);
+    }
+
+    @Test
+    public void testPublicFieldMadeFinal() {
+        // Making a public field final is binary incompatible
+        assertIncompatible(true, "PublicFieldMadeFinal", "A", "buzz", "Z", IncompatibilityMessages.FIELD_MADE_FINAL);
+    }
+
+    @Test
     public void testApiRemovedPrivateField() {
         // Removing a private field is API compatible
         assertCompatible(false, "RemovedPrivateField", "A");

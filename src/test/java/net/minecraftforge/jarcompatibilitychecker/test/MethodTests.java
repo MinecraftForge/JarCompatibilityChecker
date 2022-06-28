@@ -53,6 +53,18 @@ public class MethodTests extends BaseCompatibilityTest {
     }
 
     @Test
+    public void testApiPrivateMethodMadeFinal() {
+        // Making a private method final is API compatible
+        assertCompatible(false, "PrivateMethodMadeFinal", "A");
+    }
+
+    @Test
+    public void testPrivateMethodMadeFinal() {
+        // Making a private method final is binary incompatible
+        assertIncompatible(true, "PrivateMethodMadeFinal", "A", "thing", "()V", IncompatibilityMessages.METHOD_MADE_FINAL);
+    }
+
+    @Test
     public void testApiPublicMethodMadeAbstract() {
         // Making a public method abstract in a public abstract class is API incompatible
         assertIncompatible(false, "PublicMethodMadeAbstract", "A", "thing", "()V", IncompatibilityMessages.METHOD_MADE_ABSTRACT);
@@ -62,6 +74,18 @@ public class MethodTests extends BaseCompatibilityTest {
     public void testPublicMethodMadeAbstract() {
         // Making a public method abstract in a public abstract class is binary incompatible
         assertIncompatible(true, "PublicMethodMadeAbstract", "A", "thing", "()V", IncompatibilityMessages.METHOD_MADE_ABSTRACT);
+    }
+
+    @Test
+    public void testApiPublicMethodMadeFinal() {
+        // Making a public method final is API incompatible
+        assertIncompatible(false, "PublicMethodMadeFinal", "A", "thing", "()V", IncompatibilityMessages.METHOD_MADE_FINAL);
+    }
+
+    @Test
+    public void testPublicMethodMadeFinal() {
+        // Making a public method final is binary incompatible
+        assertIncompatible(true, "PublicMethodMadeFinal", "A", "thing", "()V", IncompatibilityMessages.METHOD_MADE_FINAL);
     }
 
     @Test

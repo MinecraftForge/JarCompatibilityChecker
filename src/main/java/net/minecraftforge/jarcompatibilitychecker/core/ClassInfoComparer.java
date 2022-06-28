@@ -53,8 +53,13 @@ public class ClassInfoComparer {
         }
 
         boolean classVisible = checkBinary || (baseClassInfo.access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0;
+        boolean classFinal = (baseClassInfo.access & Opcodes.ACC_FINAL) != 0;
         if (isMadeAbstract(classVisible, baseClassInfo.access, concreteClassInfo.access)) {
             results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_MADE_ABSTRACT);
+        }
+
+        if (isMadeFinal(checkBinary, baseClassInfo.access, concreteClassInfo.access)) {
+            results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_MADE_FINAL);
         }
 
         checkAnnotations(annotationCheckMode, results, baseClassInfo, baseClassInfo.annotations, concreteClassInfo.annotations);
@@ -119,6 +124,10 @@ public class ClassInfoComparer {
                 results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.METHOD_MADE_ABSTRACT);
             }
 
+            if (!classFinal && isMadeFinal(checkBinary, baseInfo.access, inputInfo.access)) {
+                results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.METHOD_MADE_FINAL);
+            }
+
             checkAnnotations(annotationCheckMode, results, baseInfo, baseInfo.annotations, inputInfo.annotations);
         }
 
@@ -143,6 +152,10 @@ public class ClassInfoComparer {
                 results.addFieldIncompatibility(baseInfo, IncompatibilityMessages.FIELD_LOWERED_VISIBILITY);
             }
 
+            if (!classFinal && isMadeFinal(checkBinary, baseInfo.access, inputInfo.access)) {
+                results.addFieldIncompatibility(baseInfo, IncompatibilityMessages.FIELD_MADE_FINAL);
+            }
+
             checkAnnotations(annotationCheckMode, results, baseInfo, baseInfo.annotations, inputInfo.annotations);
         }
 
@@ -164,6 +177,13 @@ public class ClassInfoComparer {
     public static boolean isMadeAbstract(boolean classVisible, int baseAccess, int inputAccess) {
         // Even if this is a method which is not visible from outside the JAR, issues can still appear at runtime due to an implementation class not being able to implement the package-private method.
         return classVisible && (baseAccess & Opcodes.ACC_ABSTRACT) == 0 && (inputAccess & Opcodes.ACC_ABSTRACT) != 0;
+    }
+
+    public static boolean isMadeFinal(boolean checkBinary, int baseAccess, int inputAccess) {
+        boolean basePublic = (baseAccess & Opcodes.ACC_PUBLIC) != 0;
+        boolean baseProtected = (baseAccess & Opcodes.ACC_PROTECTED) != 0;
+
+        return (checkBinary || basePublic || baseProtected) && (baseAccess & Opcodes.ACC_FINAL) == 0 && (inputAccess & Opcodes.ACC_FINAL) != 0;
     }
 
     public static <I extends MemberInfo> void checkAnnotations(@Nullable AnnotationCheckMode mode, ClassInfoComparisonResults results, I memberInfo, List<AnnotationInfo> baseAnnotations,

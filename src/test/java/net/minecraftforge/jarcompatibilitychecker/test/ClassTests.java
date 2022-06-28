@@ -64,6 +64,17 @@ public class ClassTests extends BaseCompatibilityTest {
         assertClassIncompatible(true, "PackagePrivateClassMadeAbstract", "A", IncompatibilityMessages.CLASS_MADE_ABSTRACT);
     }
 
+    @Test
+    public void testApiPackagePrivateClassMadeFinal() {
+        // Making a package-private class final is API compatible
+        assertCompatible(false, "PackagePrivateClassMadeFinal", "A");
+    }
+
+    @Test
+    public void testPackagePrivateClassMadeFinal() {
+        // Making a package-private class final is binary incompatible
+        assertClassIncompatible(true, "PackagePrivateClassMadeFinal", "A", IncompatibilityMessages.CLASS_MADE_FINAL);
+    }
 
     @Test
     public void testApiPublicClassMadeAbstract() {
@@ -75,5 +86,17 @@ public class ClassTests extends BaseCompatibilityTest {
     public void testPublicClassMadeAbstract() {
         // Making a public class abstract is binary incompatible
         assertClassIncompatible(true, "PublicClassMadeAbstract", "A", IncompatibilityMessages.CLASS_MADE_ABSTRACT);
+    }
+
+    @Test
+    public void testApiPublicClassMadeFinal() {
+        // Making a public class final is API incompatible
+        assertClassIncompatible(false, "PublicClassMadeFinal", "A", IncompatibilityMessages.CLASS_MADE_FINAL);
+    }
+
+    @Test
+    public void testPublicClassMadeFinal() {
+        // Making a public class final is binary incompatible
+        assertClassIncompatible(true, "PublicClassMadeFinal", "A", IncompatibilityMessages.CLASS_MADE_FINAL);
     }
 }
