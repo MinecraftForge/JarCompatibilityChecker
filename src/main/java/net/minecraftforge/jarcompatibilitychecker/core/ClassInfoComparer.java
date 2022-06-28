@@ -131,6 +131,15 @@ public class ClassInfoComparer {
             checkAnnotations(annotationCheckMode, results, baseInfo, baseInfo.annotations, inputInfo.annotations);
         }
 
+        for (MethodInfo concreteInfo : concreteClassInfo.getMethods().values()) {
+            if (seenMethods.contains(concreteInfo))
+                continue;
+
+            if (classVisible && (concreteInfo.access & Opcodes.ACC_ABSTRACT) != 0) {
+                results.addMethodIncompatibility(concreteInfo, IncompatibilityMessages.METHOD_MADE_ABSTRACT);
+            }
+        }
+
         for (FieldInfo baseInfo : baseClassInfo.getFields().values()) {
             boolean isStatic = (baseInfo.access & Opcodes.ACC_STATIC) != 0;
             FieldInfo inputInfo = getFieldInfo(concreteClassInfo, concreteParents, isStatic, baseInfo.name);
