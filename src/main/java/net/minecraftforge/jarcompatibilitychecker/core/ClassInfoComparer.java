@@ -36,11 +36,12 @@ public class ClassInfoComparer {
     public static ClassInfoComparisonResults compare(boolean checkBinary, @Nullable AnnotationCheckMode annotationCheckMode, ClassInfoCache baseCache, ClassInfo baseClassInfo,
             ClassInfoCache concreteCache, @Nullable ClassInfo concreteClassInfo) {
         ClassInfoComparisonResults results = new ClassInfoComparisonResults(baseClassInfo);
+        boolean classVisible = isVisible(checkBinary, baseClassInfo.access);
 
         if (concreteClassInfo == null) {
             if (checkBinary) {
                 results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_MISSING);
-            } else if ((baseClassInfo.access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0) {
+            } else if (classVisible) {
                 results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.API_CLASS_MISSING);
             }
 
@@ -52,7 +53,6 @@ public class ClassInfoComparer {
             results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_LOWERED_VISIBILITY);
         }
 
-        boolean classVisible = checkBinary || (baseClassInfo.access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0;
         boolean classFinal = (baseClassInfo.access & Opcodes.ACC_FINAL) != 0;
         if (isMadeAbstract(classVisible, baseClassInfo.access, concreteClassInfo.access)) {
             results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_MADE_ABSTRACT);
@@ -67,7 +67,7 @@ public class ClassInfoComparer {
         if (baseClassInfo.superName != null) {
             ClassInfo superClassInfo = baseCache.getClassInfo(baseClassInfo.superName);
             // A missing superclass is always important to binary compatibility but only important to API compatibility if the superclass is public or protected
-            boolean shouldCheckSuper = checkBinary || (superClassInfo.access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0;
+            boolean shouldCheckSuper = isVisible(checkBinary, superClassInfo.access);
             if (shouldCheckSuper && !hasSuperClass(concreteCache, concreteClassInfo, baseClassInfo.superName)) {
                 results.addClassIncompatibility(baseClassInfo, String.format(Locale.ROOT, IncompatibilityMessages.CLASS_MISSING_SUPERCLASS, baseClassInfo.superName));
             }
@@ -81,7 +81,7 @@ public class ClassInfoComparer {
             missingInterfaces = new HashSet<>(missingInterfaces);
             missingInterfaces.removeIf(interfaceName -> {
                 ClassInfo interfaceInfo = baseCache.getClassInfo(interfaceName);
-                // A missing interface is only important to API compatibility if the interface is public or protected
+                // A missing interface is only important to API compatibility if the interface is public or protected, so we get rid of any that aren't
                 return (interfaceInfo.access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) == 0;
             });
         }
@@ -100,13 +100,12 @@ public class ClassInfoComparer {
         for (MethodInfo baseInfo : baseClassInfo.getMethods().values()) {
             boolean isStatic = (baseInfo.access & Opcodes.ACC_STATIC) != 0;
             MethodInfo inputInfo = getMethodInfo(concreteClassInfo, concreteParents, isStatic, baseInfo.name, baseInfo.desc);
-            boolean basePublic = (baseInfo.access & Opcodes.ACC_PUBLIC) != 0;
-            boolean baseProtected = (baseInfo.access & Opcodes.ACC_PROTECTED) != 0;
+            boolean methodVisible = isVisible(checkBinary, baseInfo.access);
 
             if (inputInfo == null) {
                 if (checkBinary) {
                     results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.METHOD_REMOVED);
-                } else if (basePublic || baseProtected) {
+                } else if (methodVisible) {
                     results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.API_METHOD_REMOVED);
                 }
 
@@ -143,13 +142,12 @@ public class ClassInfoComparer {
         for (FieldInfo baseInfo : baseClassInfo.getFields().values()) {
             boolean isStatic = (baseInfo.access & Opcodes.ACC_STATIC) != 0;
             FieldInfo inputInfo = getFieldInfo(concreteClassInfo, concreteParents, isStatic, baseInfo.name);
-            boolean basePublic = (baseInfo.access & Opcodes.ACC_PUBLIC) != 0;
-            boolean baseProtected = (baseInfo.access & Opcodes.ACC_PROTECTED) != 0;
+            boolean fieldVisible = isVisible(checkBinary, baseInfo.access);
 
             if (inputInfo == null) {
                 if (checkBinary) {
                     results.addFieldIncompatibility(baseInfo, IncompatibilityMessages.FIELD_REMOVED);
-                } else if (basePublic || baseProtected) {
+                } else if (fieldVisible) {
                     results.addFieldIncompatibility(baseInfo, IncompatibilityMessages.API_FIELD_REMOVED);
                 }
 
@@ -188,11 +186,12 @@ public class ClassInfoComparer {
         return classVisible && (baseAccess & Opcodes.ACC_ABSTRACT) == 0 && (inputAccess & Opcodes.ACC_ABSTRACT) != 0;
     }
 
-    public static boolean isMadeFinal(boolean checkBinary, int baseAccess, int inputAccess) {
-        boolean basePublic = (baseAccess & Opcodes.ACC_PUBLIC) != 0;
-        boolean baseProtected = (baseAccess & Opcodes.ACC_PROTECTED) != 0;
+    public static boolean isVisible(boolean checkBinary, int access) {
+        return checkBinary || (access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0;
+    }
 
-        return (checkBinary || basePublic || baseProtected) && (baseAccess & Opcodes.ACC_FINAL) == 0 && (inputAccess & Opcodes.ACC_FINAL) != 0;
+    public static boolean isMadeFinal(boolean checkBinary, int baseAccess, int inputAccess) {
+        return isVisible(checkBinary, baseAccess) && (baseAccess & Opcodes.ACC_FINAL) == 0 && (inputAccess & Opcodes.ACC_FINAL) != 0;
     }
 
     public static <I extends MemberInfo> void checkAnnotations(@Nullable AnnotationCheckMode mode, ClassInfoComparisonResults results, I memberInfo, List<AnnotationInfo> baseAnnotations,
@@ -324,7 +323,7 @@ public class ClassInfoComparer {
         while (superInfo.superName != null) {
             ClassInfo currentInfo = superInfo;
             superInfo = cache.getClassInfo(superInfo.superName);
-            boolean include = includeSuper && (checkBinary || (currentInfo.access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0);
+            boolean include = includeSuper && isVisible(checkBinary, currentInfo.access);
             if (include)
                 parentGraph.putEdge(currentInfo.name, superInfo.name);
             for (String parentInterfaceName : superInfo.getInterfaces()) {
