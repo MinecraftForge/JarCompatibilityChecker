@@ -7,6 +7,10 @@ Compatibility modes:
 - **API** - Checks for compatibility between the public and protected members (API) of the base JAR and concrete JAR
 - **Binary** - Checks for binary compatibility between all members, both public and private, of the base JAR and concrete JAR
 
+It is not a goal of this tool to check for source compatibility.
+Because it operates on compiled class files located inside JARs, the tool only looks for incompatibilities that could cause exceptions and crashes at runtime.
+This means that there may be changes between the base JAR and concrete JAR which cause a source incompatibility but are not reported by this tool as it is still compatible at runtime.
+
 ## Usage
 ```groovy
 repositories {
