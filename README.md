@@ -1,4 +1,4 @@
-# JarCompatibilityChecker ![Latest release version badge](https://img.shields.io/maven-metadata/v?color=forestgreen&metadataUrl=https%3A%2F%2Fmaven.minecraftforge.net%2Fnet%2Fminecraftforge%2FJarCompatibilityChecker%2Fmaven-metadata.xml)
+# JarCompatibilityChecker
 **JarCompatibilityChecker** (or **JCC** for short) is a tool written with Java 8 which reports API or binary incompatibilities between two JARs.
 The JAR with the API or base code to be compared against is called the **base JAR**.
 The input JAR to compare against the API or base for incompatibilities is called the **concrete JAR**.
