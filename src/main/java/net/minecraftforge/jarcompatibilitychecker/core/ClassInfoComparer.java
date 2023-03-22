@@ -33,8 +33,13 @@ public class ClassInfoComparer {
         return compare(checkBinary, null, baseCache, baseClassInfo, concreteCache, concreteClassInfo);
     }
 
-    public static ClassInfoComparisonResults compare(boolean checkBinary, @Nullable AnnotationCheckMode annotationCheckMode, ClassInfoCache baseCache, ClassInfo baseClassInfo,
-            ClassInfoCache concreteCache, @Nullable ClassInfo concreteClassInfo) {
+    public static ClassInfoComparisonResults compare(boolean checkBinary, @Nullable AnnotationCheckMode annotationCheckMode,
+            ClassInfoCache baseCache, ClassInfo baseClassInfo, ClassInfoCache concreteCache, @Nullable ClassInfo concreteClassInfo) {
+        return compare(checkBinary, annotationCheckMode, FunctionalInterfaceCheckMode.ERROR_CHANGED, baseCache, baseClassInfo, concreteCache, concreteClassInfo);
+    }
+
+    public static ClassInfoComparisonResults compare(boolean checkBinary, @Nullable AnnotationCheckMode annotationCheckMode, FunctionalInterfaceCheckMode functionalInterfaceCheckMode,
+            ClassInfoCache baseCache, ClassInfo baseClassInfo, ClassInfoCache concreteCache, @Nullable ClassInfo concreteClassInfo) {
         ClassInfoComparisonResults results = new ClassInfoComparisonResults(baseClassInfo);
         boolean classVisible = isVisible(checkBinary, baseClassInfo.access);
 
@@ -63,6 +68,8 @@ public class ClassInfoComparer {
         }
 
         checkAnnotations(annotationCheckMode, results, baseClassInfo, baseClassInfo.annotations, concreteClassInfo.annotations);
+
+        checkFunctionalInterfaces(functionalInterfaceCheckMode, results, baseClassInfo, concreteClassInfo, baseCache, concreteCache);
 
         if (baseClassInfo.superName != null) {
             ClassInfo superClassInfo = baseCache.getClassInfo(baseClassInfo.superName);
@@ -247,6 +254,67 @@ public class ClassInfoComparer {
                 }
             }
         }
+    }
+
+    public static void checkFunctionalInterfaces(FunctionalInterfaceCheckMode functionalInterfaceCheckMode, ClassInfoComparisonResults results, ClassInfo baseClassInfo, ClassInfo concreteClassInfo,
+            ClassInfoCache baseCache, ClassInfoCache concreteCache) {
+        if (functionalInterfaceCheckMode == FunctionalInterfaceCheckMode.NONE || (baseClassInfo.access & Opcodes.ACC_ABSTRACT) == 0)
+            return;
+
+        MethodInfo baseSamInfo = findSamMethod(baseClassInfo, baseCache);
+
+        if (baseSamInfo == null)
+            return;
+
+        // The new SAM on the concrete class, if it exists. This could have a different descriptor from the base class SAM.
+        MethodInfo newSamInfo = findSamMethod(concreteClassInfo, concreteCache);
+        boolean isError = functionalInterfaceCheckMode == FunctionalInterfaceCheckMode.ERROR_CHANGED;
+
+        if (newSamInfo == null) {
+            // The old SAM name + descriptor looked up on the concrete class
+            MethodInfo concreteSamInfo = concreteClassInfo.getMethod(baseSamInfo.name, baseSamInfo.desc);
+            boolean samMadeDefault = concreteSamInfo != null && (concreteSamInfo.access & Opcodes.ACC_ABSTRACT) == 0;
+            results.addMethodIncompatibility(baseSamInfo, samMadeDefault
+                    ? IncompatibilityMessages.FUNCTIONAL_INTERFACE_SAM_MADE_DEFAULT
+                    : IncompatibilityMessages.FUNCTIONAL_INTERFACE_SAM_REMOVED, isError);
+            return;
+        }
+
+        if (!baseSamInfo.desc.equals(newSamInfo.desc)) {
+            results.addMethodIncompatibility(baseSamInfo, String.format(Locale.ROOT, IncompatibilityMessages.FUNCTIONAL_INTERFACE_SAM_CHANGED, newSamInfo.name + newSamInfo.desc), isError);
+        }
+    }
+
+    @Nullable
+    private static MethodInfo findSamMethod(ClassInfo classInfo, ClassInfoCache cache) {
+        MethodInfo samInfo = null;
+        ClassInfo objectClassInfo = cache.getClassInfo("java/lang/Object");
+
+        for (MethodInfo methodInfo : classInfo.getMethods().values()) {
+            if ((methodInfo.access & Opcodes.ACC_ABSTRACT) == 0)
+                continue;
+
+            MethodInfo objectMethodInfo = objectClassInfo.getMethod(methodInfo.name, methodInfo.desc);
+
+            if (objectMethodInfo != null) {
+                if ((objectMethodInfo.access & Opcodes.ACC_FINAL) != 0)
+                    throw new IllegalStateException("java.lang.Object method " + methodInfo.name + " is final, but " + classInfo.name + " attempts to override it. Impossible?");
+
+                if ((objectMethodInfo.access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0) {
+                    // Not a SAM
+                    continue;
+                }
+            }
+
+            if (samInfo != null) {
+                // We found 2 abstract methods, so this is not a functional interface and has no SAM
+                return null;
+            }
+
+            samInfo = methodInfo;
+        }
+
+        return samInfo;
     }
 
     public static boolean hasSuperClass(ClassInfoCache cache, ClassInfo classInfo, String superClass) {

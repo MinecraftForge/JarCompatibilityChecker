@@ -39,6 +39,10 @@ public class ClassInfoComparisonResults {
         addIncompatibility(new MethodIncompatibility(methodInfo, message));
     }
 
+    void addMethodIncompatibility(MethodInfo methodInfo, String message, boolean isError) {
+        addIncompatibility(new MethodIncompatibility(methodInfo, message, isError));
+    }
+
     void addFieldIncompatibility(FieldInfo fieldInfo, String message) {
         addIncompatibility(new FieldIncompatibility(fieldInfo, message));
     }

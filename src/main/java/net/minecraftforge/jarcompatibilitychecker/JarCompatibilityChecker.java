@@ -9,6 +9,7 @@ import net.minecraftforge.jarcompatibilitychecker.core.AnnotationCheckMode;
 import net.minecraftforge.jarcompatibilitychecker.core.ClassInfoCache;
 import net.minecraftforge.jarcompatibilitychecker.core.ClassInfoComparer;
 import net.minecraftforge.jarcompatibilitychecker.core.ClassInfoComparisonResults;
+import net.minecraftforge.jarcompatibilitychecker.core.FunctionalInterfaceCheckMode;
 import net.minecraftforge.jarcompatibilitychecker.core.Incompatibility;
 import net.minecraftforge.jarcompatibilitychecker.data.ClassInfo;
 import org.jetbrains.annotations.Nullable;
@@ -26,6 +27,7 @@ public class JarCompatibilityChecker {
     private final boolean checkBinary;
     @Nullable
     private final AnnotationCheckMode annotationCheckMode;
+    private final FunctionalInterfaceCheckMode functionalInterfaceCheckMode;
     private final List<File> commonLibs;
     private final List<File> baseLibs;
     private final List<File> concreteLibs;
@@ -38,7 +40,7 @@ public class JarCompatibilityChecker {
      * @param checkBinary if {@code true}, all members of the base jar including package-private and private will be checked for a match in the input jar.
      * Otherwise, only public and protected members of the base jar will be checked for a match in the input jar.
      */
-    public JarCompatibilityChecker(File baseJar, File inputJar, boolean checkBinary,  List<File> commonLibs, List<File> baseLibs, List<File> concreteLibs,
+    public JarCompatibilityChecker(File baseJar, File inputJar, boolean checkBinary, List<File> commonLibs, List<File> baseLibs, List<File> concreteLibs,
             Consumer<String> stdLogger, Consumer<String> errLogger) {
         this(baseJar, inputJar, checkBinary, null, commonLibs, baseLibs, concreteLibs, stdLogger, errLogger);
     }
@@ -50,12 +52,25 @@ public class JarCompatibilityChecker {
      * Otherwise, only public and protected members of the base jar will be checked for a match in the input jar.
      * @param annotationCheckMode determines whether annotations will be checked and if a mismatch is an error condition
      */
-    public JarCompatibilityChecker(File baseJar, File inputJar, boolean checkBinary, @Nullable AnnotationCheckMode annotationCheckMode, List<File> commonLibs, List<File> baseLibs,
-            List<File> concreteLibs, Consumer<String> stdLogger, Consumer<String> errLogger) {
+    public JarCompatibilityChecker(File baseJar, File inputJar, boolean checkBinary, @Nullable AnnotationCheckMode annotationCheckMode,
+            List<File> commonLibs, List<File> baseLibs, List<File> concreteLibs, Consumer<String> stdLogger, Consumer<String> errLogger) {
+        this(baseJar, inputJar, checkBinary, annotationCheckMode, FunctionalInterfaceCheckMode.ERROR_CHANGED, commonLibs, baseLibs, concreteLibs, stdLogger, errLogger);
+    }
+
+    /**
+     * Constructs a new JarCompatibilityChecker.
+     *
+     * @param checkBinary if {@code true}, all members of the base jar including package-private and private will be checked for a match in the input jar.
+     * Otherwise, only public and protected members of the base jar will be checked for a match in the input jar.
+     * @param annotationCheckMode determines whether annotations will be checked and if a mismatch is an error condition
+     */
+    public JarCompatibilityChecker(File baseJar, File inputJar, boolean checkBinary, @Nullable AnnotationCheckMode annotationCheckMode, FunctionalInterfaceCheckMode functionalInterfaceCheckMode,
+            List<File> commonLibs, List<File> baseLibs, List<File> concreteLibs, Consumer<String> stdLogger, Consumer<String> errLogger) {
         this.baseJar = baseJar;
         this.inputJar = inputJar;
         this.checkBinary = checkBinary;
         this.annotationCheckMode = annotationCheckMode;
+        this.functionalInterfaceCheckMode = functionalInterfaceCheckMode;
         this.commonLibs = commonLibs;
         this.baseLibs = baseLibs;
         this.concreteLibs = concreteLibs;
@@ -80,6 +95,7 @@ public class JarCompatibilityChecker {
     public int check() throws IOException {
         log("Compatibility mode: " + (this.checkBinary ? "Binary" : "API"));
         log("Annotation check mode: " + (this.annotationCheckMode == null ? "NONE" : this.annotationCheckMode));
+        log("Functional interface check mode: " + this.functionalInterfaceCheckMode);
         log("Base JAR: " + this.baseJar.getAbsolutePath());
         log("Input JAR: " + this.inputJar.getAbsolutePath());
         for (File baseLib : this.baseLibs) {
@@ -106,7 +122,7 @@ public class JarCompatibilityChecker {
             ClassInfo concreteClassInfo = concreteCache.getMainClassInfo(baseClassName);
 
             // log("Comparing " + baseClassName);
-            ClassInfoComparisonResults results = ClassInfoComparer.compare(this.checkBinary, this.annotationCheckMode, baseCache, baseClassInfo, concreteCache, concreteClassInfo);
+            ClassInfoComparisonResults results = ClassInfoComparer.compare(this.checkBinary, this.annotationCheckMode, this.functionalInterfaceCheckMode, baseCache, baseClassInfo, concreteCache, concreteClassInfo);
             if (results.isIncompatible())
                 classIncompatibilities.add(results);
         }

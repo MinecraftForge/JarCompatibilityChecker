@@ -22,6 +22,9 @@ public class IncompatibilityMessages {
     public static final String METHOD_LOWERED_VISIBILITY = "Method was lowered in visibility";
     public static final String METHOD_MADE_ABSTRACT = "Method was made abstract";
     public static final String METHOD_MADE_FINAL = "Method was made final";
+    public static final String FUNCTIONAL_INTERFACE_SAM_MADE_DEFAULT = "Method was made default when it was previously a functional interface SAM";
+    public static final String FUNCTIONAL_INTERFACE_SAM_CHANGED = "Method was changed to %s when it was previously a functional interface SAM";
+    public static final String FUNCTIONAL_INTERFACE_SAM_REMOVED = "Method was removed when it was previously a functional interface SAM";
 
     // Field
     public static final String FIELD_REMOVED = "Field was removed";
