@@ -29,7 +29,7 @@ public class FunctionalInterfaceTests extends BaseCompatibilityTest {
         // A SAM made default in a functional interface is actually binary compatible
         // LambdaMetafactory does not care if the method is defaulted or not; it will still create the lambda
         // This preserves compatibility with existing binaries, but not necessarily source compatibility if new defaulted methods are added to an interface
-        assertCompatible(false, "SamMadeDefault", "A");
+        assertCompatible(false, "SAMMadeDefault", "A");
     }
 
     @Test
