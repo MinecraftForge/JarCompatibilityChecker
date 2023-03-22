@@ -12,7 +12,6 @@ import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 import joptsimple.util.EnumConverter;
 import net.minecraftforge.jarcompatibilitychecker.core.AnnotationCheckMode;
-import net.minecraftforge.jarcompatibilitychecker.core.FunctionalInterfaceCheckMode;
 
 import java.io.File;
 import java.util.List;
@@ -30,12 +29,6 @@ public class ConsoleTool {
             OptionSpec<File> concreteLibO = parser.acceptsAll(ImmutableList.of("concrete-lib", "concrete-library"), "Libraries that only the input JAR uses").withRequiredArg().ofType(File.class);
             OptionSpec<AnnotationCheckMode> annotationCheckModeO = parser.acceptsAll(ImmutableList.of("annotation-check-mode", "ann-mode"), "What mode to use for checking annotations")
                     .withRequiredArg().withValuesConvertedBy(new EnumConverter<AnnotationCheckMode>(AnnotationCheckMode.class) {});
-            OptionSpec<FunctionalInterfaceCheckMode> functionalInterfaceCheckModeO = parser.acceptsAll(
-                            ImmutableList.of("functional-interface-check-mode", "fi-mode", "sam-type-mode"),
-                            "What mode to use for checking functional interfaces")
-                    .withRequiredArg()
-                    .withValuesConvertedBy(new EnumConverter<FunctionalInterfaceCheckMode>(FunctionalInterfaceCheckMode.class) {})
-                    .defaultsTo(FunctionalInterfaceCheckMode.ERROR_CHANGED);
 
             OptionSet options;
             try {
@@ -55,11 +48,10 @@ public class ConsoleTool {
             List<File> concreteLibs = options.valuesOf(concreteLibO);
             boolean checkBinary = !options.has(apiO) || options.has(binaryO);
             AnnotationCheckMode annotationCheckMode = options.valueOf(annotationCheckModeO);
-            FunctionalInterfaceCheckMode functionalInterfaceCheckMode = options.valueOf(functionalInterfaceCheckModeO);
 
             // TODO allow logging to a file
-            JarCompatibilityChecker checker = new JarCompatibilityChecker(baseJar, inputJar, checkBinary, annotationCheckMode, functionalInterfaceCheckMode,
-                    commonLibs, baseLibs, concreteLibs, System.out::println, System.err::println);
+            JarCompatibilityChecker checker = new JarCompatibilityChecker(baseJar, inputJar, checkBinary, annotationCheckMode, commonLibs, baseLibs, concreteLibs,
+                    System.out::println, System.err::println);
 
             int incompatibilities = checker.check();
             // Clamp to a max of 125 to prevent conflicting with special meaning exit codes - https://tldp.org/LDP/abs/html/exitcodes.html

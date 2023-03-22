@@ -11,16 +11,10 @@ import org.jetbrains.annotations.NotNull;
 public class MethodIncompatibility implements Incompatibility<MethodInfo> {
     private final MethodInfo methodInfo;
     private final String message;
-    private final boolean isError;
 
     public MethodIncompatibility(MethodInfo methodInfo, String message) {
-        this(methodInfo, message, true);
-    }
-
-    public MethodIncompatibility(MethodInfo methodInfo, String message, boolean isError) {
         this.methodInfo = methodInfo;
         this.message = message;
-        this.isError = isError;
     }
 
     @NotNull
@@ -33,11 +27,6 @@ public class MethodIncompatibility implements Incompatibility<MethodInfo> {
     @Override
     public String getMessage() {
         return this.message;
-    }
-
-    @Override
-    public boolean isError() {
-        return this.isError;
     }
 
     @Override

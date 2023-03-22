@@ -20,22 +20,22 @@ public class FunctionalInterfaceTests extends BaseCompatibilityTest {
     public void testSamChanged() {
         // A SAM with a changed descriptor in a functional interface is binary incompatible
         assertIncompatible(false, "SAMChanged", "A",
-                new IncompatibilityData("a", "()V", IncompatibilityMessages.FUNCTIONAL_INTERFACE_SAM_CHANGED, "a(I)V"),
                 new IncompatibilityData("a", "()V", IncompatibilityMessages.API_METHOD_REMOVED),
                 new IncompatibilityData("a", "(I)V", IncompatibilityMessages.METHOD_MADE_ABSTRACT));
     }
 
     @Test
     public void testSamMadeDefault() {
-        // A SAM made default in a functional interface is binary incompatible
-        assertIncompatible(false, "SAMMadeDefault", "A", "a", "()V", IncompatibilityMessages.FUNCTIONAL_INTERFACE_SAM_MADE_DEFAULT);
+        // A SAM made default in a functional interface is actually binary compatible
+        // LambdaMetafactory does not care if the method is defaulted or not; it will still create the lambda
+        // This preserves compatibility with existing binaries, but not necessarily source compatibility if new defaulted methods are added to an interface
+        assertCompatible(false, "SamMadeDefault", "A");
     }
 
     @Test
     public void testSamRemoved() {
         // A removed SAM in a functional interface is binary incompatible
         assertIncompatible(false, "SAMRemoved", "A",
-                new IncompatibilityData("a", "()V", IncompatibilityMessages.FUNCTIONAL_INTERFACE_SAM_REMOVED),
                 new IncompatibilityData("a", "()V", IncompatibilityMessages.API_METHOD_REMOVED));
     }
 }
