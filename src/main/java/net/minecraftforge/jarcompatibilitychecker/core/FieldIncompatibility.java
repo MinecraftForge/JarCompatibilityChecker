@@ -6,31 +6,14 @@
 package net.minecraftforge.jarcompatibilitychecker.core;
 
 import net.minecraftforge.jarcompatibilitychecker.data.FieldInfo;
-import org.jetbrains.annotations.NotNull;
 
-public class FieldIncompatibility implements Incompatibility<FieldInfo> {
-    private final FieldInfo fieldInfo;
-    private final String message;
-
-    public FieldIncompatibility(FieldInfo fieldInfo, String message) {
-        this.fieldInfo = fieldInfo;
-        this.message = message;
-    }
-
-    @NotNull
-    @Override
-    public FieldInfo getInfo() {
-        return this.fieldInfo;
-    }
-
-    @NotNull
-    @Override
-    public String getMessage() {
-        return this.message;
+public class FieldIncompatibility extends BaseIncompatibility<FieldInfo> {
+    public FieldIncompatibility(FieldInfo fieldInfo, String message, boolean isError) {
+        super(fieldInfo, message, isError);
     }
 
     @Override
     public String toString() {
-        return this.fieldInfo + " - " + this.message;
+        return this.memberInfo + " - " + this.message;
     }
 }

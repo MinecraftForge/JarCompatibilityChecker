@@ -35,7 +35,6 @@ public class FunctionalInterfaceTests extends BaseCompatibilityTest {
     @Test
     public void testSamRemoved() {
         // A removed SAM in a functional interface is binary incompatible
-        assertIncompatible(false, "SAMRemoved", "A",
-                new IncompatibilityData("a", "()V", IncompatibilityMessages.API_METHOD_REMOVED));
+        assertIncompatible(false, "SAMRemoved", "A", "a", "()V", IncompatibilityMessages.API_METHOD_REMOVED);
     }
 }

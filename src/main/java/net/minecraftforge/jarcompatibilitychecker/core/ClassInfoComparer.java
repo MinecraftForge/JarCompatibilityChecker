@@ -33,16 +33,29 @@ public class ClassInfoComparer {
         return compare(checkBinary, null, baseCache, baseClassInfo, concreteCache, concreteClassInfo);
     }
 
-    public static ClassInfoComparisonResults compare(boolean checkBinary, @Nullable AnnotationCheckMode annotationCheckMode, ClassInfoCache baseCache, ClassInfo baseClassInfo,
+    public static ClassInfoComparisonResults compare(boolean checkBinary, @Nullable AnnotationCheckMode annotationCheckMode,
+            ClassInfoCache baseCache, ClassInfo baseClassInfo, ClassInfoCache concreteCache, @Nullable ClassInfo concreteClassInfo) {
+        return compare(checkBinary, annotationCheckMode, InternalAnnotationCheckMode.DEFAULT_INTERNAL_ANNOTATIONS, InternalAnnotationCheckMode.DEFAULT_MODE,
+                baseCache, baseClassInfo, concreteCache, concreteClassInfo);
+    }
+
+    public static ClassInfoComparisonResults compare(boolean checkBinary, @Nullable AnnotationCheckMode annotationCheckMode,
+            List<String> internalAnnotations, InternalAnnotationCheckMode internalAnnotationCheckMode, ClassInfoCache baseCache, ClassInfo baseClassInfo,
             ClassInfoCache concreteCache, @Nullable ClassInfo concreteClassInfo) {
         ClassInfoComparisonResults results = new ClassInfoComparisonResults(baseClassInfo);
+        boolean classInternal = isInternalApi(baseClassInfo, internalAnnotations, internalAnnotationCheckMode);
+
+        if (classInternal && internalAnnotationCheckMode == InternalAnnotationCheckMode.SKIP)
+            return results;
+
+        boolean isClassError = !classInternal || internalAnnotationCheckMode == InternalAnnotationCheckMode.ERROR;
         boolean classVisible = isVisible(checkBinary, baseClassInfo.access);
 
         if (concreteClassInfo == null) {
             if (checkBinary) {
-                results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_MISSING);
+                results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_MISSING, isClassError);
             } else if (classVisible) {
-                results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.API_CLASS_MISSING);
+                results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.API_CLASS_MISSING, isClassError);
             }
 
             // This is as far as we can get if the input class doesn't exist
@@ -50,26 +63,26 @@ public class ClassInfoComparer {
         }
 
         if (isVisibilityLowered(checkBinary, baseClassInfo.access, concreteClassInfo.access)) {
-            results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_LOWERED_VISIBILITY);
+            results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_LOWERED_VISIBILITY, isClassError);
         }
 
         boolean classFinal = (baseClassInfo.access & Opcodes.ACC_FINAL) != 0;
         if (isMadeAbstract(classVisible, baseClassInfo.access, concreteClassInfo.access)) {
-            results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_MADE_ABSTRACT);
+            results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_MADE_ABSTRACT, isClassError);
         }
 
         if (isMadeFinal(checkBinary, baseClassInfo.access, concreteClassInfo.access)) {
-            results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_MADE_FINAL);
+            results.addClassIncompatibility(baseClassInfo, IncompatibilityMessages.CLASS_MADE_FINAL, isClassError);
         }
 
-        checkAnnotations(annotationCheckMode, results, baseClassInfo, baseClassInfo.annotations, concreteClassInfo.annotations);
+        checkAnnotations(annotationCheckMode, results, baseClassInfo, isClassError, baseClassInfo.annotations, concreteClassInfo.annotations);
 
         if (baseClassInfo.superName != null) {
             ClassInfo superClassInfo = baseCache.getClassInfo(baseClassInfo.superName);
             // A missing superclass is always important to binary compatibility but only important to API compatibility if the superclass is public or protected
             boolean shouldCheckSuper = isVisible(checkBinary, superClassInfo.access);
             if (shouldCheckSuper && !hasSuperClass(concreteCache, concreteClassInfo, baseClassInfo.superName)) {
-                results.addClassIncompatibility(baseClassInfo, String.format(Locale.ROOT, IncompatibilityMessages.CLASS_MISSING_SUPERCLASS, baseClassInfo.superName));
+                results.addClassIncompatibility(baseClassInfo, String.format(Locale.ROOT, IncompatibilityMessages.CLASS_MISSING_SUPERCLASS, baseClassInfo.superName), isClassError);
             }
         }
 
@@ -87,9 +100,9 @@ public class ClassInfoComparer {
         }
         if (!missingInterfaces.isEmpty()) {
             if (missingInterfaces.size() == 1) {
-                results.addClassIncompatibility(baseClassInfo, String.format(Locale.ROOT, IncompatibilityMessages.CLASS_MISSING_INTERFACE, missingInterfaces.iterator().next()));
+                results.addClassIncompatibility(baseClassInfo, String.format(Locale.ROOT, IncompatibilityMessages.CLASS_MISSING_INTERFACE, missingInterfaces.iterator().next()), isClassError);
             } else {
-                results.addClassIncompatibility(baseClassInfo, String.format(Locale.ROOT, IncompatibilityMessages.CLASS_MISSING_INTERFACES, missingInterfaces));
+                results.addClassIncompatibility(baseClassInfo, String.format(Locale.ROOT, IncompatibilityMessages.CLASS_MISSING_INTERFACES, missingInterfaces), isClassError);
             }
         }
 
@@ -100,13 +113,18 @@ public class ClassInfoComparer {
         for (MethodInfo baseInfo : baseClassInfo.getMethods().values()) {
             boolean isStatic = (baseInfo.access & Opcodes.ACC_STATIC) != 0;
             MethodInfo inputInfo = getMethodInfo(concreteClassInfo, concreteParents, isStatic, baseInfo.name, baseInfo.desc);
+            boolean methodInternal = isInternalApi(baseInfo, internalAnnotations, internalAnnotationCheckMode);
+            if (methodInternal && internalAnnotationCheckMode == InternalAnnotationCheckMode.SKIP)
+                continue;
+
+            boolean isMethodError = !methodInternal || internalAnnotationCheckMode == InternalAnnotationCheckMode.ERROR;
             boolean methodVisible = isVisible(checkBinary, baseInfo.access);
 
             if (inputInfo == null) {
                 if (checkBinary) {
-                    results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.METHOD_REMOVED);
+                    results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.METHOD_REMOVED, isMethodError);
                 } else if (methodVisible) {
-                    results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.API_METHOD_REMOVED);
+                    results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.API_METHOD_REMOVED, isMethodError);
                 }
 
                 // This is as far as we can get without any info on the concrete method
@@ -116,18 +134,18 @@ public class ClassInfoComparer {
             seenMethods.add(inputInfo);
 
             if (isVisibilityLowered(checkBinary, baseInfo.access, inputInfo.access)) {
-                results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.METHOD_LOWERED_VISIBILITY);
+                results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.METHOD_LOWERED_VISIBILITY, isMethodError);
             }
 
             if (isMadeAbstract(classVisible, baseInfo.access, inputInfo.access)) {
-                results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.METHOD_MADE_ABSTRACT);
+                results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.METHOD_MADE_ABSTRACT, isMethodError);
             }
 
             if (!classFinal && isMadeFinal(checkBinary, baseInfo.access, inputInfo.access)) {
-                results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.METHOD_MADE_FINAL);
+                results.addMethodIncompatibility(baseInfo, IncompatibilityMessages.METHOD_MADE_FINAL, isMethodError);
             }
 
-            checkAnnotations(annotationCheckMode, results, baseInfo, baseInfo.annotations, inputInfo.annotations);
+            checkAnnotations(annotationCheckMode, results, baseInfo, isMethodError, baseInfo.annotations, inputInfo.annotations);
         }
 
         for (MethodInfo concreteInfo : concreteClassInfo.getMethods().values()) {
@@ -142,13 +160,18 @@ public class ClassInfoComparer {
         for (FieldInfo baseInfo : baseClassInfo.getFields().values()) {
             boolean isStatic = (baseInfo.access & Opcodes.ACC_STATIC) != 0;
             FieldInfo inputInfo = getFieldInfo(concreteClassInfo, concreteParents, isStatic, baseInfo.name);
+            boolean fieldInternal = isInternalApi(baseInfo, internalAnnotations, internalAnnotationCheckMode);
+            if (fieldInternal && internalAnnotationCheckMode == InternalAnnotationCheckMode.SKIP)
+                continue;
+
+            boolean isFieldError = !fieldInternal || internalAnnotationCheckMode == InternalAnnotationCheckMode.ERROR;
             boolean fieldVisible = isVisible(checkBinary, baseInfo.access);
 
             if (inputInfo == null) {
                 if (checkBinary) {
-                    results.addFieldIncompatibility(baseInfo, IncompatibilityMessages.FIELD_REMOVED);
+                    results.addFieldIncompatibility(baseInfo, IncompatibilityMessages.FIELD_REMOVED, isFieldError);
                 } else if (fieldVisible) {
-                    results.addFieldIncompatibility(baseInfo, IncompatibilityMessages.API_FIELD_REMOVED);
+                    results.addFieldIncompatibility(baseInfo, IncompatibilityMessages.API_FIELD_REMOVED, isFieldError);
                 }
 
                 // This is as far as we can get without any info on the concrete field
@@ -156,14 +179,14 @@ public class ClassInfoComparer {
             }
 
             if (isVisibilityLowered(checkBinary, baseInfo.access, inputInfo.access)) {
-                results.addFieldIncompatibility(baseInfo, IncompatibilityMessages.FIELD_LOWERED_VISIBILITY);
+                results.addFieldIncompatibility(baseInfo, IncompatibilityMessages.FIELD_LOWERED_VISIBILITY, isFieldError);
             }
 
             if (!classFinal && isMadeFinal(checkBinary, baseInfo.access, inputInfo.access)) {
-                results.addFieldIncompatibility(baseInfo, IncompatibilityMessages.FIELD_MADE_FINAL);
+                results.addFieldIncompatibility(baseInfo, IncompatibilityMessages.FIELD_MADE_FINAL, isFieldError);
             }
 
-            checkAnnotations(annotationCheckMode, results, baseInfo, baseInfo.annotations, inputInfo.annotations);
+            checkAnnotations(annotationCheckMode, results, baseInfo, isFieldError, baseInfo.annotations, inputInfo.annotations);
         }
 
         return results;
@@ -194,8 +217,25 @@ public class ClassInfoComparer {
         return isVisible(checkBinary, baseAccess) && (baseAccess & Opcodes.ACC_FINAL) == 0 && (inputAccess & Opcodes.ACC_FINAL) != 0;
     }
 
-    public static <I extends MemberInfo> void checkAnnotations(@Nullable AnnotationCheckMode mode, ClassInfoComparisonResults results, I memberInfo, List<AnnotationInfo> baseAnnotations,
-            List<AnnotationInfo> concreteAnnotations) {
+    public static boolean isInternalApi(MemberInfo memberInfo, List<String> internalAnnotations, InternalAnnotationCheckMode checkMode) {
+        if (checkMode == InternalAnnotationCheckMode.ERROR)
+            return false; // Even if internal, we want to handle internal members like normal for ERROR check mode
+
+        for (String internalAnnotation : internalAnnotations) {
+            if (memberInfo.hasAnnotation(internalAnnotation))
+                return true;
+        }
+
+        return false;
+    }
+
+    public static <I extends MemberInfo> void checkAnnotations(@Nullable AnnotationCheckMode mode, ClassInfoComparisonResults results, I memberInfo,
+            List<AnnotationInfo> baseAnnotations, List<AnnotationInfo> concreteAnnotations) {
+        checkAnnotations(mode, results, memberInfo, true, baseAnnotations, concreteAnnotations);
+    }
+
+    public static <I extends MemberInfo> void checkAnnotations(@Nullable AnnotationCheckMode mode, ClassInfoComparisonResults results, I memberInfo, boolean isError,
+            List<AnnotationInfo> baseAnnotations, List<AnnotationInfo> concreteAnnotations) {
         if (mode == null || (baseAnnotations.isEmpty() && concreteAnnotations.isEmpty()))
             return;
 
@@ -243,7 +283,7 @@ public class ClassInfoComparer {
 
                 if (match == null) {
                     // No match found for concrete annotation in base JAR; this means a new annotation was found
-                    results.addAnnotationIncompatibility(mode, memberInfo, concreteAnnotation, IncompatibilityMessages.ANNOTATION_ADDED);
+                    results.addAnnotationIncompatibility(mode, memberInfo, concreteAnnotation, IncompatibilityMessages.ANNOTATION_ADDED, isError);
                 }
             }
         }

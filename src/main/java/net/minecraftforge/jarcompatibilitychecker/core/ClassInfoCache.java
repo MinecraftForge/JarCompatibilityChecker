@@ -96,6 +96,10 @@ public class ClassInfoCache {
         return new ClassInfoCache(mainClasses, libClasses);
     }
 
+    public static ClassInfoCache empty() {
+        return new ClassInfoCache(new HashMap<>(), new HashMap<>());
+    }
+
     private ClassInfoCache() {}
 
     private ClassInfoCache(Map<String, ClassInfo> mainClasses, Map<String, ClassInfo> libClasses) {

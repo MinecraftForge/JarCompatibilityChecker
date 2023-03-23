@@ -12,6 +12,7 @@ import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 import joptsimple.util.EnumConverter;
 import net.minecraftforge.jarcompatibilitychecker.core.AnnotationCheckMode;
+import net.minecraftforge.jarcompatibilitychecker.core.InternalAnnotationCheckMode;
 
 import java.io.File;
 import java.util.List;
@@ -29,6 +30,12 @@ public class ConsoleTool {
             OptionSpec<File> concreteLibO = parser.acceptsAll(ImmutableList.of("concrete-lib", "concrete-library"), "Libraries that only the input JAR uses").withRequiredArg().ofType(File.class);
             OptionSpec<AnnotationCheckMode> annotationCheckModeO = parser.acceptsAll(ImmutableList.of("annotation-check-mode", "ann-mode"), "What mode to use for checking annotations")
                     .withRequiredArg().withValuesConvertedBy(new EnumConverter<AnnotationCheckMode>(AnnotationCheckMode.class) {});
+            OptionSpec<String> internalAnnotationO = parser.acceptsAll(ImmutableList.of("internal-annotation", "internal-ann"), "The fully resolved classname of an allowed internal API annotation")
+                    .withRequiredArg().defaultsTo(InternalAnnotationCheckMode.DEFAULT_INTERNAL_ANNOTATIONS.toArray(new String[0]));
+            OptionSpec<InternalAnnotationCheckMode> internalAnnotationCheckModeO = parser.acceptsAll(
+                    ImmutableList.of("internal-annotation-check-mode", "internal-ann-mode"),
+                    "What mode to use for checking elements marked with an internal API annotation"
+            ).withRequiredArg().withValuesConvertedBy(new EnumConverter<InternalAnnotationCheckMode>(InternalAnnotationCheckMode.class) {}).defaultsTo(InternalAnnotationCheckMode.DEFAULT_MODE);
 
             OptionSet options;
             try {
@@ -48,10 +55,12 @@ public class ConsoleTool {
             List<File> concreteLibs = options.valuesOf(concreteLibO);
             boolean checkBinary = !options.has(apiO) || options.has(binaryO);
             AnnotationCheckMode annotationCheckMode = options.valueOf(annotationCheckModeO);
+            List<String> internalAnnotations = options.valuesOf(internalAnnotationO);
+            InternalAnnotationCheckMode internalAnnotationCheckMode = options.valueOf(internalAnnotationCheckModeO);
 
             // TODO allow logging to a file
-            JarCompatibilityChecker checker = new JarCompatibilityChecker(baseJar, inputJar, checkBinary, annotationCheckMode, commonLibs, baseLibs, concreteLibs,
-                    System.out::println, System.err::println);
+            JarCompatibilityChecker checker = new JarCompatibilityChecker(baseJar, inputJar, checkBinary, annotationCheckMode, internalAnnotations, internalAnnotationCheckMode,
+                    commonLibs, baseLibs, concreteLibs, System.out::println, System.err::println);
 
             int incompatibilities = checker.check();
             // Clamp to a max of 125 to prevent conflicting with special meaning exit codes - https://tldp.org/LDP/abs/html/exitcodes.html

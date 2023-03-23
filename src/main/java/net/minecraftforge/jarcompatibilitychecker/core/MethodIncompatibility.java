@@ -6,31 +6,14 @@
 package net.minecraftforge.jarcompatibilitychecker.core;
 
 import net.minecraftforge.jarcompatibilitychecker.data.MethodInfo;
-import org.jetbrains.annotations.NotNull;
 
-public class MethodIncompatibility implements Incompatibility<MethodInfo> {
-    private final MethodInfo methodInfo;
-    private final String message;
-
-    public MethodIncompatibility(MethodInfo methodInfo, String message) {
-        this.methodInfo = methodInfo;
-        this.message = message;
-    }
-
-    @NotNull
-    @Override
-    public MethodInfo getInfo() {
-        return this.methodInfo;
-    }
-
-    @NotNull
-    @Override
-    public String getMessage() {
-        return this.message;
+public class MethodIncompatibility extends BaseIncompatibility<MethodInfo> {
+    public MethodIncompatibility(MethodInfo methodInfo, String message, boolean isError) {
+        super(methodInfo, message, isError);
     }
 
     @Override
     public String toString() {
-        return this.methodInfo + " - " + this.message;
+        return this.memberInfo + " - " + this.message;
     }
 }

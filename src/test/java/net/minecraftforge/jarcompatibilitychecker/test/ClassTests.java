@@ -17,6 +17,12 @@ public class ClassTests extends BaseCompatibilityTest {
     }
 
     @Test
+    public void testInternalClassDeleted() {
+        // Removing a class marked with an internal annotation should produce a warning by default but still be considered API/binary compatible
+        assertClassIncompatible(true, "InternalClassDeleted", "A", false, IncompatibilityMessages.CLASS_MISSING);
+    }
+
+    @Test
     public void testApiLoweredClassVisibility() {
         // Lowering visibility of a public class to package-private is API incompatible
         assertClassIncompatible(false, "LoweredClassVisibility", "A", IncompatibilityMessages.CLASS_LOWERED_VISIBILITY);

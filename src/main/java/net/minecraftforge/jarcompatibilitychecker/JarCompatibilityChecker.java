@@ -10,6 +10,7 @@ import net.minecraftforge.jarcompatibilitychecker.core.ClassInfoCache;
 import net.minecraftforge.jarcompatibilitychecker.core.ClassInfoComparer;
 import net.minecraftforge.jarcompatibilitychecker.core.ClassInfoComparisonResults;
 import net.minecraftforge.jarcompatibilitychecker.core.Incompatibility;
+import net.minecraftforge.jarcompatibilitychecker.core.InternalAnnotationCheckMode;
 import net.minecraftforge.jarcompatibilitychecker.data.ClassInfo;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class JarCompatibilityChecker {
     private final File baseJar;
@@ -26,6 +28,8 @@ public class JarCompatibilityChecker {
     private final boolean checkBinary;
     @Nullable
     private final AnnotationCheckMode annotationCheckMode;
+    private final List<String> internalAnnotations;
+    private final InternalAnnotationCheckMode internalAnnotationCheckMode;
     private final List<File> commonLibs;
     private final List<File> baseLibs;
     private final List<File> concreteLibs;
@@ -38,7 +42,7 @@ public class JarCompatibilityChecker {
      * @param checkBinary if {@code true}, all members of the base jar including package-private and private will be checked for a match in the input jar.
      * Otherwise, only public and protected members of the base jar will be checked for a match in the input jar.
      */
-    public JarCompatibilityChecker(File baseJar, File inputJar, boolean checkBinary,  List<File> commonLibs, List<File> baseLibs, List<File> concreteLibs,
+    public JarCompatibilityChecker(File baseJar, File inputJar, boolean checkBinary, List<File> commonLibs, List<File> baseLibs, List<File> concreteLibs,
             Consumer<String> stdLogger, Consumer<String> errLogger) {
         this(baseJar, inputJar, checkBinary, null, commonLibs, baseLibs, concreteLibs, stdLogger, errLogger);
     }
@@ -50,12 +54,32 @@ public class JarCompatibilityChecker {
      * Otherwise, only public and protected members of the base jar will be checked for a match in the input jar.
      * @param annotationCheckMode determines whether annotations will be checked and if a mismatch is an error condition
      */
-    public JarCompatibilityChecker(File baseJar, File inputJar, boolean checkBinary, @Nullable AnnotationCheckMode annotationCheckMode, List<File> commonLibs, List<File> baseLibs,
-            List<File> concreteLibs, Consumer<String> stdLogger, Consumer<String> errLogger) {
+    public JarCompatibilityChecker(File baseJar, File inputJar, boolean checkBinary, @Nullable AnnotationCheckMode annotationCheckMode,
+            List<File> commonLibs, List<File> baseLibs, List<File> concreteLibs, Consumer<String> stdLogger, Consumer<String> errLogger) {
+        this(baseJar, inputJar, checkBinary, annotationCheckMode, InternalAnnotationCheckMode.DEFAULT_INTERNAL_ANNOTATIONS, InternalAnnotationCheckMode.DEFAULT_MODE,
+                commonLibs, baseLibs, concreteLibs, stdLogger, errLogger);
+    }
+
+    /**
+     * Constructs a new JarCompatibilityChecker.
+     *
+     * @param checkBinary if {@code true}, all members of the base jar including package-private and private will be checked for a match in the input jar.
+     * Otherwise, only public and protected members of the base jar will be checked for a match in the input jar.
+     * @param annotationCheckMode determines whether annotations will be checked and if a mismatch is an error condition
+     * @param internalAnnotations a list of fully resolved classnames for annotations that can be used to mark elements as internal API
+     * @param internalAnnotationCheckMode determines how internally-marked elements will be checked
+     */
+    public JarCompatibilityChecker(File baseJar, File inputJar, boolean checkBinary, @Nullable AnnotationCheckMode annotationCheckMode, List<String> internalAnnotations,
+            InternalAnnotationCheckMode internalAnnotationCheckMode, List<File> commonLibs, List<File> baseLibs, List<File> concreteLibs, Consumer<String> stdLogger, Consumer<String> errLogger) {
         this.baseJar = baseJar;
         this.inputJar = inputJar;
         this.checkBinary = checkBinary;
         this.annotationCheckMode = annotationCheckMode;
+        this.internalAnnotations = internalAnnotations == InternalAnnotationCheckMode.DEFAULT_INTERNAL_ANNOTATIONS ? internalAnnotations : internalAnnotations.stream().map(s -> {
+            boolean inDescForm = s.indexOf(';') == s.length() - 1;
+            return inDescForm ? s.replace('.', '/') : 'L' + s.replace('.', '/') + ';';
+        }).collect(Collectors.toList());
+        this.internalAnnotationCheckMode = internalAnnotationCheckMode;
         this.commonLibs = commonLibs;
         this.baseLibs = baseLibs;
         this.concreteLibs = concreteLibs;
@@ -80,6 +104,8 @@ public class JarCompatibilityChecker {
     public int check() throws IOException {
         log("Compatibility mode: " + (this.checkBinary ? "Binary" : "API"));
         log("Annotation check mode: " + (this.annotationCheckMode == null ? "NONE" : this.annotationCheckMode));
+        log("Internal API annotation check mode: " + this.internalAnnotationCheckMode);
+        log("Internal API annotations: " + this.internalAnnotations);
         log("Base JAR: " + this.baseJar.getAbsolutePath());
         log("Input JAR: " + this.inputJar.getAbsolutePath());
         for (File baseLib : this.baseLibs) {
@@ -106,7 +132,8 @@ public class JarCompatibilityChecker {
             ClassInfo concreteClassInfo = concreteCache.getMainClassInfo(baseClassName);
 
             // log("Comparing " + baseClassName);
-            ClassInfoComparisonResults results = ClassInfoComparer.compare(this.checkBinary, this.annotationCheckMode, baseCache, baseClassInfo, concreteCache, concreteClassInfo);
+            ClassInfoComparisonResults results = ClassInfoComparer.compare(this.checkBinary, this.annotationCheckMode, this.internalAnnotations, this.internalAnnotationCheckMode,
+                    baseCache, baseClassInfo, concreteCache, concreteClassInfo);
             if (results.isIncompatible())
                 classIncompatibilities.add(results);
         }

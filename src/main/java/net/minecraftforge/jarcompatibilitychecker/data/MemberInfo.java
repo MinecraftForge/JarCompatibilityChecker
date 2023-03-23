@@ -21,4 +21,23 @@ public interface MemberInfo {
 
     @NotNull
     List<AnnotationInfo> getAnnotations();
+
+    @Nullable
+    default AnnotationInfo getAnnotation(String desc) {
+        for (AnnotationInfo annotation : this.getAnnotations()) {
+            if (desc.equals(annotation.desc))
+                return annotation;
+        }
+
+        return null;
+    }
+
+    default boolean hasAnnotation(String desc) {
+        for (AnnotationInfo annotation : this.getAnnotations()) {
+            if (desc.equals(annotation.desc))
+                return true;
+        }
+
+        return false;
+    }
 }

@@ -32,25 +32,47 @@ public class ClassInfoComparisonResults {
     }
 
     void addClassIncompatibility(ClassInfo classInfo, String message) {
-        addIncompatibility(new ClassIncompatibility(classInfo, message));
+        addClassIncompatibility(classInfo, message, true);
+    }
+
+    void addClassIncompatibility(ClassInfo classInfo, String message, boolean isError) {
+        addIncompatibility(new ClassIncompatibility(classInfo, message, isError));
     }
 
     void addMethodIncompatibility(MethodInfo methodInfo, String message) {
-        addIncompatibility(new MethodIncompatibility(methodInfo, message));
+        addMethodIncompatibility(methodInfo, message, true);
+    }
+
+    void addMethodIncompatibility(MethodInfo methodInfo, String message, boolean isError) {
+        addIncompatibility(new MethodIncompatibility(methodInfo, message, isError));
     }
 
     void addFieldIncompatibility(FieldInfo fieldInfo, String message) {
-        addIncompatibility(new FieldIncompatibility(fieldInfo, message));
+        addFieldIncompatibility(fieldInfo, message, true);
+    }
+
+    void addFieldIncompatibility(FieldInfo fieldInfo, String message, boolean isError) {
+        addIncompatibility(new FieldIncompatibility(fieldInfo, message, isError));
     }
 
     <I extends MemberInfo> void addAnnotationIncompatibility(AnnotationCheckMode mode, I memberInfo, AnnotationInfo annotationInfo, String message) {
-        addIncompatibility(new AnnotationIncompatibility<>(memberInfo, annotationInfo, message, mode.shouldError()));
+        addAnnotationIncompatibility(mode, memberInfo, annotationInfo, message, true);
     }
 
+    <I extends MemberInfo> void addAnnotationIncompatibility(AnnotationCheckMode mode, I memberInfo, AnnotationInfo annotationInfo, String message, boolean isError) {
+        addIncompatibility(new AnnotationIncompatibility<>(memberInfo, annotationInfo, message, isError && mode.shouldError()));
+    }
+
+    /**
+     * @return {@code true} if there are no incompatibilities, including both errors and warnings
+     */
     public boolean isCompatible() {
         return this.incompatibilities == null || this.incompatibilities.isEmpty();
     }
 
+    /**
+     * @return {@code true} if there are any incompatibilities, including both errors and warnings
+     */
     public boolean isIncompatible() {
         return this.incompatibilities != null && !this.incompatibilities.isEmpty();
     }
