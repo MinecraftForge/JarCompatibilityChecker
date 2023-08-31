@@ -1,19 +1,19 @@
 plugins {
     id 'java'
     id 'maven-publish'
-    id 'com.github.johnrengelman.shadow' version '7.1.2'
     id 'org.cadixdev.licenser' version '0.6.1'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
     id 'net.minecraftforge.gradleutils' version '2.+'
 }
 
 group 'net.minecraftforge'
 
 version = gradleutils.getTagOffsetVersion()
-println('Version: ' + version)
-java.toolchain.languageVersion = JavaLanguageVersion.of(8)
+println "Version: $version"
 
-ext {
-    CHANGELOG_TAG = '0.1'
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(8)
+    withSourcesJar()
 }
 
 license {
@@ -25,7 +25,8 @@ repositories {
     mavenCentral()
 
     maven {
-        url 'https://maven.minecraftforge.net/'
+        name = 'MinecraftForge'
+        url = 'https://maven.minecraftforge.net/'
     }
 }
 
@@ -39,7 +40,7 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
 }
 
-jar {
+tasks.named('jar', Jar).configure {
     from(project.rootDir) {
         include 'LICENSE'
     }
@@ -52,7 +53,7 @@ jar {
     }
 }
 
-shadowJar {
+tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar).configure {
     from(project.rootDir) {
         include 'LICENSE'
     }
@@ -63,47 +64,45 @@ shadowJar {
     exclude 'META-INF/versions/9/module-info.class'
 }
 
-assemble.dependsOn shadowJar
-
-java.withSourcesJar()
+tasks.named('assemble').configure {
+    dependsOn shadowJar
+}
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
 }
 
 publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
+    publications.register('mavenJava', MavenPublication) {
+        from components.java
 
-            pom {
-                name = 'JAR Compatibility Checker'
-                description = 'Reports API or binary incompatibilities between two JARs'
+        pom {
+            name = 'JAR Compatibility Checker'
+            description = 'Reports API or binary incompatibilities between two JARs'
+            url = 'https://github.com/MinecraftForge/JarCompatibilityChecker'
+
+            scm {
                 url = 'https://github.com/MinecraftForge/JarCompatibilityChecker'
+                connection = 'scm:git:git://github.com/MinecraftForge/JarCompatibilityChecker.git'
+                developerConnection = 'scm:git:git@github.com:MinecraftForge/JarCompatibilityChecker.git'
+            }
 
-                scm {
-                    url = 'https://github.com/MinecraftForge/JarCompatibilityChecker'
-                    connection = 'scm:git:git://github.com/MinecraftForge/JarCompatibilityChecker.git'
-                    developerConnection = 'scm:git:git@github.com:MinecraftForge/JarCompatibilityChecker.git'
+            issueManagement {
+                system = 'github'
+                url = 'https://github.com/MinecraftForge/JarCompatibilityChecker/issues'
+            }
+
+            licenses {
+                license {
+                    name = 'LGPLv2.1'
+                    url = 'https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt'
                 }
+            }
 
-                issueManagement {
-                    system = 'github'
-                    url = 'https://github.com/MinecraftForge/JarCompatibilityChecker/issues'
-                }
-
-                licenses {
-                    license {
-                        name = 'LGPLv2.1'
-                        url = 'https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt'
-                    }
-                }
-
-                developers {
-                    developer {
-                        id = 'SizableShrimp'
-                        name = 'SizableShrimp'
-                    }
+            developers {
+                developer {
+                    id = 'SizableShrimp'
+                    name = 'SizableShrimp'
                 }
             }
         }
@@ -114,5 +113,5 @@ publishing {
 }
 
 changelog {
-    fromTag CHANGELOG_TAG
+    fromTag '0.1'
 }
