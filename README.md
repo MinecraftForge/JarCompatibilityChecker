@@ -15,6 +15,7 @@ This means that there may be changes between the base JAR and concrete JAR which
 ```groovy
 repositories {
     maven {
+        name = 'MinecraftForge'
         url = 'https://maven.minecraftforge.net/'
     }
 }

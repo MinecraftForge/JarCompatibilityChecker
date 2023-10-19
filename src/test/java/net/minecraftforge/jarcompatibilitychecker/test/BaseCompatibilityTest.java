@@ -2,7 +2,6 @@
  * Copyright (c) Forge Development LLC and contributors
  * SPDX-License-Identifier: LGPL-2.1-only
  */
-
 package net.minecraftforge.jarcompatibilitychecker.test;
 
 import net.minecraftforge.jarcompatibilitychecker.core.ClassInfoCache;

@@ -1,3 +1,6 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import net.minecraftforge.gradleutils.PomUtils
+
 plugins {
     id 'java'
     id 'maven-publish'
@@ -6,28 +9,20 @@ plugins {
     id 'net.minecraftforge.gradleutils' version '2.+'
 }
 
-group 'net.minecraftforge'
-
+group = 'net.minecraftforge'
 version = gradleutils.getTagOffsetVersion()
 println "Version: $version"
 
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(8)
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
     withSourcesJar()
-}
-
-license {
-    header project.file('LICENSE-header.txt')
-    include 'net/minecraftforge/jarcompatibilitychecker/**/*.java'
 }
 
 repositories {
     mavenCentral()
-
-    maven {
-        name = 'MinecraftForge'
-        url = 'https://maven.minecraftforge.net/'
-    }
+    maven gradleutils.forgeMaven
 }
 
 dependencies {
@@ -53,7 +48,7 @@ tasks.named('jar', Jar).configure {
     }
 }
 
-tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar).configure {
+tasks.named('shadowJar', ShadowJar).configure {
     from(project.rootDir) {
         include 'LICENSE'
     }
@@ -65,11 +60,21 @@ tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.Shadow
 }
 
 tasks.named('assemble').configure {
-    dependsOn shadowJar
+    dependsOn 'shadowJar'
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+}
+
+changelog {
+    fromTag '0.1'
+}
+
+license {
+    header = file('LICENSE-header.txt')
+    newLine = false
+    include 'net/minecraftforge/jarcompatibilitychecker/**/*.java'
 }
 
 publishing {
@@ -81,37 +86,17 @@ publishing {
             description = 'Reports API or binary incompatibilities between two JARs'
             url = 'https://github.com/MinecraftForge/JarCompatibilityChecker'
 
-            scm {
-                url = 'https://github.com/MinecraftForge/JarCompatibilityChecker'
-                connection = 'scm:git:git://github.com/MinecraftForge/JarCompatibilityChecker.git'
-                developerConnection = 'scm:git:git@github.com:MinecraftForge/JarCompatibilityChecker.git'
-            }
+            PomUtils.setGitHubDetails(pom, 'JarCompatibilityChecker')
 
-            issueManagement {
-                system = 'github'
-                url = 'https://github.com/MinecraftForge/JarCompatibilityChecker/issues'
-            }
-
-            licenses {
-                license {
-                    name = 'LGPLv2.1'
-                    url = 'https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt'
-                }
-            }
+            license PomUtils.Licenses.LGPLv2_1
 
             developers {
-                developer {
-                    id = 'SizableShrimp'
-                    name = 'SizableShrimp'
-                }
+                developer PomUtils.Developers.SizableShrimp
             }
         }
     }
+
     repositories {
         maven gradleutils.getPublishingForgeMaven()
     }
-}
-
-changelog {
-    fromTag '0.1'
 }
