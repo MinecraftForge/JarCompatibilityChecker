@@ -1,32 +1,28 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import net.minecraftforge.gradleutils.PomUtils
+
 plugins {
     id 'java'
     id 'maven-publish'
-    id 'com.github.johnrengelman.shadow' version '7.1.2'
     id 'org.cadixdev.licenser' version '0.6.1'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
     id 'net.minecraftforge.gradleutils' version '2.+'
 }
 
-group 'net.minecraftforge'
-
+group = 'net.minecraftforge'
 version = gradleutils.getTagOffsetVersion()
-println('Version: ' + version)
-java.toolchain.languageVersion = JavaLanguageVersion.of(8)
+println "Version: $version"
 
-ext {
-    CHANGELOG_TAG = '0.1'
-}
-
-license {
-    header project.file('LICENSE-header.txt')
-    include 'net/minecraftforge/jarcompatibilitychecker/**/*.java'
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+    withSourcesJar()
 }
 
 repositories {
     mavenCentral()
-
-    maven {
-        url 'https://maven.minecraftforge.net/'
-    }
+    maven gradleutils.forgeMaven
 }
 
 dependencies {
@@ -39,7 +35,7 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
 }
 
-jar {
+tasks.named('jar', Jar).configure {
     from(project.rootDir) {
         include 'LICENSE'
     }
@@ -52,7 +48,7 @@ jar {
     }
 }
 
-shadowJar {
+tasks.named('shadowJar', ShadowJar).configure {
     from(project.rootDir) {
         include 'LICENSE'
     }
@@ -63,56 +59,44 @@ shadowJar {
     exclude 'META-INF/versions/9/module-info.class'
 }
 
-assemble.dependsOn shadowJar
-
-java.withSourcesJar()
+tasks.named('assemble').configure {
+    dependsOn 'shadowJar'
+}
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
 }
 
+changelog {
+    fromTag '0.1'
+}
+
+license {
+    header = file('LICENSE-header.txt')
+    newLine = false
+    include 'net/minecraftforge/jarcompatibilitychecker/**/*.java'
+}
+
 publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
+    publications.register('mavenJava', MavenPublication) {
+        from components.java
 
-            pom {
-                name = 'JAR Compatibility Checker'
-                description = 'Reports API or binary incompatibilities between two JARs'
-                url = 'https://github.com/MinecraftForge/JarCompatibilityChecker'
+        pom {
+            name = 'JAR Compatibility Checker'
+            description = 'Reports API or binary incompatibilities between two JARs'
+            url = 'https://github.com/MinecraftForge/JarCompatibilityChecker'
 
-                scm {
-                    url = 'https://github.com/MinecraftForge/JarCompatibilityChecker'
-                    connection = 'scm:git:git://github.com/MinecraftForge/JarCompatibilityChecker.git'
-                    developerConnection = 'scm:git:git@github.com:MinecraftForge/JarCompatibilityChecker.git'
-                }
+            PomUtils.setGitHubDetails(pom, 'JarCompatibilityChecker')
 
-                issueManagement {
-                    system = 'github'
-                    url = 'https://github.com/MinecraftForge/JarCompatibilityChecker/issues'
-                }
+            license PomUtils.Licenses.LGPLv2_1
 
-                licenses {
-                    license {
-                        name = 'LGPLv2.1'
-                        url = 'https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt'
-                    }
-                }
-
-                developers {
-                    developer {
-                        id = 'SizableShrimp'
-                        name = 'SizableShrimp'
-                    }
-                }
+            developers {
+                developer PomUtils.Developers.SizableShrimp
             }
         }
     }
+
     repositories {
         maven gradleutils.getPublishingForgeMaven()
     }
-}
-
-changelog {
-    fromTag CHANGELOG_TAG
 }
