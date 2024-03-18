@@ -5,9 +5,10 @@
 package net.minecraftforge.jarcompatibilitychecker.test;
 
 import net.minecraftforge.jarcompatibilitychecker.core.IncompatibilityMessages;
-import org.junit.Test;
 
 import java.nio.file.Path;
+
+import org.junit.jupiter.api.Test;
 
 public class FunctionalInterfaceTests extends BaseCompatibilityTest {
     @Override

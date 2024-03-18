@@ -144,7 +144,10 @@ public class ClassInfoCache {
             for (Path entryPath : iterable) {
                 Path namePath = entryPath.getFileName();
                 String name = namePath == null ? null : namePath.toString();
-                if (name == null || !name.endsWith(".class") || name.startsWith("."))
+                if (name == null || name.startsWith("."))
+                    continue;
+
+                if (!name.endsWith(".class") && !name.endsWith(".dat"))
                     continue;
 
                 ClassReader reader;

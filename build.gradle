@@ -4,13 +4,14 @@ import net.minecraftforge.gradleutils.PomUtils
 plugins {
     id 'java'
     id 'maven-publish'
-    id 'org.cadixdev.licenser' version '0.6.1'
+    id 'com.github.ben-manes.versions' version '0.50.0'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
-    id 'net.minecraftforge.gradleutils' version '2.+'
+    id 'net.minecraftforge.gradleutils' version '[2.3,2.4)'
+    id 'net.minecraftforge.licenser' version '1.0.1'
 }
 
 group = 'net.minecraftforge'
-version = gradleutils.getTagOffsetVersion()
+version = gradleutils.tagOffsetVersion
 println "Version: $version"
 
 java {
@@ -26,13 +27,14 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.ow2.asm:asm-commons:9.3'
-    implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
-    implementation 'com.google.code.gson:gson:2.9.0'
-    implementation 'com.google.guava:guava:31.1-jre'
-    implementation 'org.jetbrains:annotations:23.0.0'
+    implementation(libs.bundles.asm)
+    implementation(libs.jopt.simple)
+    implementation(libs.gson)
+    implementation(libs.guava)
+    compileOnly(libs.nulls)
 
-    testImplementation 'junit:junit:4.13.2'
+    testImplementation(libs.junit.api)
+    testRuntimeOnly(libs.bundles.junit.runtime)
 }
 
 tasks.named('jar', Jar).configure {
@@ -42,8 +44,8 @@ tasks.named('jar', Jar).configure {
 
     manifest {
         attributes([
-                'Main-Class': 'net.minecraftforge.jarcompatibilitychecker.ConsoleTool',
-                'Implementation-Version': project.version
+            'Main-Class': 'net.minecraftforge.jarcompatibilitychecker.ConsoleTool',
+            'Implementation-Version': project.version
         ])
     }
 }
@@ -68,7 +70,7 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 changelog {
-    fromTag '0.1'
+    from '0.1'
 }
 
 license {

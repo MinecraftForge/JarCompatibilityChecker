@@ -12,4 +12,27 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.7.0'
 }
 
+dependencyResolutionManagement {
+    versionCatalogs {
+        libs {
+            library('nulls', 'org.jetbrains:annotations:23.0.0')
+            library('jopt-simple', 'net.sf.jopt-simple:jopt-simple:5.0.4')
+            library('gson', 'com.google.code.gson:gson:2.9.0')
+            library('guava', 'com.google.guava:guava:31.1-jre')
+
+            version('junit', '5.10.1')
+            library('junit-api', 'org.junit.jupiter', 'junit-jupiter-api').versionRef('junit')
+            library('junit-engine', 'org.junit.jupiter', 'junit-jupiter-engine').versionRef('junit')
+            library('junit-platform-launcher', 'org.junit.platform:junit-platform-launcher:1.10.1')
+            bundle('junit-runtime', ['junit-engine', 'junit-platform-launcher'])
+
+            version('asm', '9.6')
+            library('asm',         'org.ow2.asm', 'asm'        ).versionRef('asm')
+            library('asm-tree',    'org.ow2.asm', 'asm-tree'   ).versionRef('asm')
+            library('asm-commons', 'org.ow2.asm', 'asm-commons').versionRef('asm')
+            bundle('asm', ['asm', 'asm-tree', 'asm-commons'])
+        }
+    }
+}
+
 rootProject.name = 'JarCompatibilityChecker'

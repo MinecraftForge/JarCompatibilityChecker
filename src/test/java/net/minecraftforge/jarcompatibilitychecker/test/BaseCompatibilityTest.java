@@ -10,7 +10,6 @@ import net.minecraftforge.jarcompatibilitychecker.core.ClassInfoComparisonResult
 import net.minecraftforge.jarcompatibilitychecker.core.Incompatibility;
 import net.minecraftforge.jarcompatibilitychecker.data.ClassInfo;
 import org.jetbrains.annotations.Nullable;
-import org.junit.Assert;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,10 +20,12 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 public abstract class BaseCompatibilityTest {
     protected Path getRoot() {
         URL url = this.getClass().getResource("/test.marker");
-        Assert.assertNotNull("Could not find test.marker", url);
+        assertNotNull(url, "Could not find test.marker");
 
         try {
             return new File(url.toURI()).getParentFile().toPath();
@@ -38,18 +39,18 @@ public abstract class BaseCompatibilityTest {
             throw new IllegalArgumentException("Must provide at least one incompatibility to test");
 
         ClassInfoComparisonResults comparisonResults = getComparisonResults(checkBinary, folder, className);
-        Assert.assertFalse(className + " was compatible when incompatibilities were expected", comparisonResults.isCompatible());
+        assertFalse(comparisonResults.isCompatible(), className + " was compatible when incompatibilities were expected");
 
         List<Incompatibility<?>> incompatibilities = comparisonResults.getIncompatibilities();
-        Assert.assertEquals(className + " had the wrong number of incompatibilities: " + comparisonResults, testIncompatibilities.length, incompatibilities.size());
+        assertEquals(testIncompatibilities.length, incompatibilities.size(), className + " had the wrong number of incompatibilities: " + comparisonResults);
 
         for (int i = 0; i < testIncompatibilities.length; i++) {
             IncompatibilityData testData = testIncompatibilities[i];
             Incompatibility<?> incompatibility = incompatibilities.get(i);
-            Assert.assertEquals(className + " had an incompatibility with the wrong name: " + incompatibility, testData.getName(), incompatibility.getInfo().getName());
-            Assert.assertEquals(className + " had an incompatibility with the wrong descriptor: " + incompatibility, testData.getDesc(), incompatibility.getInfo().getDescriptor());
-            Assert.assertEquals(className + " had an incompatibility with the wrong message: " + incompatibility, testData.getMessage(), incompatibility.getMessage());
-            Assert.assertEquals(className + " had an incompatibility with mismatch error vs. warning: " + incompatibility, testData.isError(), incompatibility.isError());
+            assertEquals(testData.getName(), incompatibility.getInfo().getName(), className + " had an incompatibility with the wrong name: " + incompatibility);
+            assertEquals(testData.getDesc(), incompatibility.getInfo().getDescriptor(), className + " had an incompatibility with the wrong descriptor: " + incompatibility);
+            assertEquals(testData.getMessage(), incompatibility.getMessage(), className + " had an incompatibility with the wrong message: " + incompatibility);
+            assertEquals(testData.isError(), incompatibility.isError(), className + " had an incompatibility with mismatch error vs. warning: " + incompatibility);
         }
     }
 
@@ -69,21 +70,21 @@ public abstract class BaseCompatibilityTest {
         if (formatArgs.length > 0)
             message = String.format(Locale.ROOT, message, formatArgs);
         ClassInfoComparisonResults comparisonResults = getComparisonResults(checkBinary, folder, className);
-        Assert.assertFalse(className + " was compatible when incompatibilities were expected", comparisonResults.isCompatible());
+        assertFalse(comparisonResults.isCompatible(), className + " was compatible when incompatibilities were expected");
 
         List<Incompatibility<?>> incompatibilities = comparisonResults.getIncompatibilities();
-        Assert.assertEquals(className + " had more than one incompatibility when one was expected: " + comparisonResults, 1, incompatibilities.size());
+        assertEquals(1, incompatibilities.size(), className + " had more than one incompatibility when one was expected: " + comparisonResults);
 
         Incompatibility<?> incompatibility = incompatibilities.get(0);
-        Assert.assertEquals(className + " had an incompatibility with the wrong name: " + incompatibility, name, incompatibility.getInfo().getName());
-        Assert.assertEquals(className + " had an incompatibility with the wrong descriptor: " + incompatibility, desc, incompatibility.getInfo().getDescriptor());
-        Assert.assertEquals(className + " had an incompatibility with the wrong message: " + incompatibility, message, incompatibility.getMessage());
-        Assert.assertEquals(className + " had an incompatibility with mismatch error vs. warning: " + incompatibility, isError, incompatibility.isError());
+        assertEquals(name,    incompatibility.getInfo().getName(),       className + " had an incompatibility with the wrong name: " + incompatibility);
+        assertEquals(desc,    incompatibility.getInfo().getDescriptor(), className + " had an incompatibility with the wrong descriptor: " + incompatibility);
+        assertEquals(message, incompatibility.getMessage(),              className + " had an incompatibility with the wrong message: " + incompatibility);
+        assertEquals(isError, incompatibility.isError(),                 className + " had an incompatibility with mismatch error vs. warning: " + incompatibility);
     }
 
     protected void assertCompatible(boolean checkBinary, String folder, String className) {
         ClassInfoComparisonResults comparisonResults = getComparisonResults(checkBinary, folder, className);
-        Assert.assertTrue(className + " had incompatibilities when none were expected: " + comparisonResults, comparisonResults.isCompatible());
+        assertTrue(comparisonResults.isCompatible(), className + " had incompatibilities when none were expected: " + comparisonResults);
     }
 
     protected ClassInfoComparisonResults getComparisonResults(boolean checkBinary, String folderName, String className) {
@@ -93,19 +94,19 @@ public abstract class BaseCompatibilityTest {
                 throw new IllegalArgumentException("Folder \"" + folderName + "\" does not match the real path \"" + folder.toRealPath().getFileName().toString() + "\"");
 
             Path baseFolder = folder.resolve("base");
-            Assert.assertTrue(baseFolder + " not found", Files.exists(baseFolder));
-            Assert.assertEquals("Base folder in " + folderName + " has invalid casing", baseFolder.toAbsolutePath(), baseFolder.toRealPath());
+            assertTrue(Files.exists(baseFolder), baseFolder + " not found");
+            assertEquals(baseFolder.toAbsolutePath(), baseFolder.toRealPath(), "Base folder in " + folderName + " has invalid casing");
 
             Path inputFolder = folder.resolve("input");
             boolean inputExists = Files.exists(inputFolder); // If it doesn't exist, all base classes got deleted, which is technically valid.
             if (inputExists)
-                Assert.assertEquals("Input folder in " + folderName + " has invalid casing", inputFolder.toAbsolutePath(), inputFolder.toRealPath());
+                assertEquals(inputFolder.toAbsolutePath(), inputFolder.toRealPath(), "Input folder in " + folderName + " has invalid casing");
 
             ClassInfoCache baseCache = ClassInfoCache.fromFolder(baseFolder);
             ClassInfoCache inputCache = inputExists ? ClassInfoCache.fromFolder(inputFolder) : ClassInfoCache.empty();
 
             ClassInfo baseClassInfo = baseCache.getMainClassInfo(className);
-            Assert.assertNotNull("Class with name " + className + " not found in " + baseFolder, baseClassInfo);
+            assertNotNull(baseClassInfo, "Class with name " + className + " not found in " + baseFolder);
 
             return ClassInfoComparer.compare(checkBinary, baseCache, baseClassInfo, inputCache, inputCache.getMainClassInfo(className));
         } catch (IOException e) {
