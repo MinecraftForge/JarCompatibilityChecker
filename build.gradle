@@ -31,7 +31,7 @@ dependencies {
     implementation(libs.jopt.simple)
     implementation(libs.gson)
     implementation(libs.guava)
-    compileOnly(libs.nulls)
+    implementation(libs.nulls)
 
     testImplementation(libs.junit.api)
     testRuntimeOnly(libs.bundles.junit.runtime)
@@ -63,6 +63,107 @@ tasks.named('shadowJar', ShadowJar).configure {
 
 tasks.named('assemble').configure {
     dependsOn 'shadowJar'
+}
+
+def getArtifacts(coord) {
+    def udep = project.dependencies.create(coord)
+    def cfg = project.configurations.detachedConfiguration(udep)
+    cfg.setTransitive(true)
+    def files = cfg.resolve()
+    def ret = [
+        main: null,
+        libs: [:]
+    ]
+
+    cfg.resolvedConfiguration.resolvedArtifacts.each {
+        def art = [
+            group: it.moduleVersion.id.group,
+            name: it.moduleVersion.id.name,
+            version: it.moduleVersion.id.version,
+            classifier: it.classifier,
+            extension: it.extension,
+            file: it.file
+        ]
+
+        def desc = "${art.group}:${art.name}:${art.version}"
+        if (art.classifier != null)
+            desc += ":${art.classifier}"
+        if (art.extension != 'jar')
+            desc += "@${art.extension}"
+
+        if (coord == desc) {
+            ret.main = art.file
+        } else {
+            ret.libs["${art.group}:${art.name}"] = [
+                version: art.version,
+                name: desc,
+                file: art.file
+            ]
+        }
+    }
+
+    return ret
+}
+
+tasks.register('testLibrary').configure {
+    dependsOn 'shadowJar'
+    doFirst {
+        def libs =
+            //['cpw.mods:securejarhandler:2.1.10', 'net.minecraftforge:securemodules:2.2.2']
+            ['net.minecraftforge:coremods:5.0.1', 'net.minecraftforge:coremods:5.1.2']
+            //['cpw.mods:modlauncher:9.0.24', 'net.minecraftforge:modlauncher:10.1.1']
+        def base = getArtifacts(libs[0])
+        def input = getArtifacts(libs[1])
+
+        def cmd = [
+            tasks.named('shadowJar').get().archiveFile.get().asFile.absolutePath,
+            '--quiet',
+            '--api'
+        ]
+        base.libs.each { ga, lib ->
+            cmd += ['--base-lib', lib.file.absolutePath]
+        }
+        input.libs.each { ga, lib ->
+            cmd += ['--input-lib', lib.file.absolutePath]
+        }
+
+        logger.lifecycle(libs[0] + ' -> ' + libs[1])
+        javaexec {
+            ignoreExitValue = true
+            main = '-jar'
+            args = cmd + [
+                '--base-jar', base.main.absolutePath,
+                '--input-jar', input.main.absolutePath
+            ]
+        }
+
+        base.libs.each { ga, lib ->
+            def ilib = input.libs[ga]
+            if (ilib == null) {
+                logger.lifecycle('')
+                logger.lifecycle("$ga: ${lib.version} -> removed")
+            } else if (ilib.version != lib.version) {
+                logger.lifecycle('')
+                logger.lifecycle("$ga: ${lib.version} -> ${ilib.version}")
+                javaexec {
+                    ignoreExitValue = true
+                    main = '-jar'
+                    args = cmd + [
+                        '--base-jar', lib.file.absolutePath,
+                        '--input-jar', ilib.file.absolutePath
+                    ]
+                }
+            }
+        }
+        input.libs.each { ga, lib ->
+            if (base.libs[ga] == null) {
+                logger.lifecycle('')
+                logger.lifecycle("$ga: missing -> ${lib.version}")
+            }
+        }
+
+         logger.lifecycle('')
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {

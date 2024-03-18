@@ -11,6 +11,7 @@ import net.minecraftforge.jarcompatibilitychecker.core.ClassInfoComparisonResult
 import net.minecraftforge.jarcompatibilitychecker.core.Incompatibility;
 import net.minecraftforge.jarcompatibilitychecker.core.InternalAnnotationCheckMode;
 import net.minecraftforge.jarcompatibilitychecker.data.ClassInfo;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
@@ -34,6 +35,7 @@ public class JarCompatibilityChecker {
     private final List<File> concreteLibs;
     private final Consumer<String> stdLogger;
     private final Consumer<String> errLogger;
+    private final Consumer<String> dbgLogger;
 
     /**
      * Constructs a new JarCompatibilityChecker.
@@ -70,6 +72,14 @@ public class JarCompatibilityChecker {
      */
     public JarCompatibilityChecker(File baseJar, File inputJar, boolean checkBinary, @Nullable AnnotationCheckMode annotationCheckMode, List<String> internalAnnotations,
             InternalAnnotationCheckMode internalAnnotationCheckMode, List<File> commonLibs, List<File> baseLibs, List<File> concreteLibs, Consumer<String> stdLogger, Consumer<String> errLogger) {
+        this(baseJar, inputJar, checkBinary, annotationCheckMode, InternalAnnotationCheckMode.DEFAULT_INTERNAL_ANNOTATIONS, InternalAnnotationCheckMode.DEFAULT_MODE,
+                commonLibs, baseLibs, concreteLibs, stdLogger, errLogger, stdLogger);
+
+    }
+
+    @ApiStatus.Internal
+    JarCompatibilityChecker(File baseJar, File inputJar, boolean checkBinary, @Nullable AnnotationCheckMode annotationCheckMode, List<String> internalAnnotations,
+            InternalAnnotationCheckMode internalAnnotationCheckMode, List<File> commonLibs, List<File> baseLibs, List<File> concreteLibs, Consumer<String> stdLogger, Consumer<String> errLogger, Consumer<String> dbgLogger) {
         this.baseJar = baseJar;
         this.inputJar = inputJar;
         this.checkBinary = checkBinary;
@@ -84,6 +94,7 @@ public class JarCompatibilityChecker {
         this.concreteLibs = concreteLibs;
         this.stdLogger = stdLogger;
         this.errLogger = errLogger;
+        this.dbgLogger = dbgLogger;
     }
 
     private void log(String message) {
@@ -94,6 +105,10 @@ public class JarCompatibilityChecker {
         this.errLogger.accept(message);
     }
 
+    private void logDebug(String message) {
+        this.dbgLogger.accept(message);
+    }
+
     /**
      * Loads the base jar and input jar and compares them for compatibility based on the current mode, API or binary.
      * Any incompatibilities will be logged to the error logger.
@@ -101,20 +116,20 @@ public class JarCompatibilityChecker {
      * @return the number of incompatibilities detected based on the current mode
      */
     public int check() throws IOException {
-        log("Compatibility mode: " + (this.checkBinary ? "Binary" : "API"));
-        log("Annotation check mode: " + (this.annotationCheckMode == null ? "NONE" : this.annotationCheckMode));
-        log("Internal API annotation check mode: " + this.internalAnnotationCheckMode);
-        log("Internal API annotations: " + this.internalAnnotations);
-        log("Base JAR: " + this.baseJar.getAbsolutePath());
-        log("Input JAR: " + this.inputJar.getAbsolutePath());
+        logDebug("Compatibility mode: " + (this.checkBinary ? "Binary" : "API"));
+        logDebug("Annotation check mode: " + (this.annotationCheckMode == null ? "NONE" : this.annotationCheckMode));
+        logDebug("Internal API annotation check mode: " + this.internalAnnotationCheckMode);
+        logDebug("Internal API annotations: " + this.internalAnnotations);
+        logDebug("Base JAR: " + this.baseJar.getAbsolutePath());
+        logDebug("Input JAR: " + this.inputJar.getAbsolutePath());
         for (File baseLib : this.baseLibs) {
-            log("Base Library: " + baseLib.getAbsolutePath());
+            logDebug("Base Library: " + baseLib.getAbsolutePath());
         }
         for (File concreteLib : this.concreteLibs) {
-            log("Concrete Library: " + concreteLib.getAbsolutePath());
+            logDebug("Concrete Library: " + concreteLib.getAbsolutePath());
         }
         for (File commonLib : this.commonLibs) {
-            log("Common Library: " + commonLib.getAbsolutePath());
+            logDebug("Common Library: " + commonLib.getAbsolutePath());
         }
 
         List<File> baseFiles = new ArrayList<>(this.baseLibs);
